@@ -1,0 +1,13 @@
+prefix=C:/ScholarForge/report_env/Library
+exec_prefix=C:/ScholarForge/report_env/Library
+libdir=C:/ScholarForge/report_env/Library/lib
+sharedlibdir=C:/ScholarForge/report_env/Library/lib
+includedir=C:/ScholarForge/report_env/Library/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.3.1
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}

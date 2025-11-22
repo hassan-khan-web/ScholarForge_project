@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en" class=""> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- DEFAULT (BLUE GRADIENT) THEME --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(300deg, #000428, #004e92, #070e34);
+            background-size: 400% 400%;
+            animation: gradientBG 25s ease infinite;
+            color: #e0e0e0;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-container {
+            background: rgba(10, 20, 40, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* --- COMPLETELY DARK THEME --- */
+        body.dark-theme {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            animation: none;
+        }
+        .dark-theme .glass-container {
+            background: rgba(20, 20, 20, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- LIGHT THEME OVERRIDES --- */
+        body.light-theme {
+            background: #eef2f9;
+            color: #1f2937;
+            animation: none;
+        }
+        .light-theme .glass-container {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+        .light-theme .gradient-text {
+            background: none; -webkit-text-fill-color: #1d4ed8; text-fill-color: #1d4ed8;
+        }
+        .light-theme #query, .light-theme #chat-input {
+            background: #ffffff; border-color: #d1d5db; color: #111827;
+            --tw-placeholder-color: #6b7280; placeholder-color: var(--tw-placeholder-color);
+        }
+        .light-theme #status-text { color: #1d4ed8; }
+        .light-theme #report-output h1,
+        .light-theme #report-output h2,
+        .light-theme #report-output h3 { color: #111827; }
+        .light-theme #report-output p { color: #374151; }
+        .light-theme #report-output strong { color: #000000; }
+        .light-theme #report-output th { background: #f3f4f6; }
+        .light-theme #report-output th, .light-theme #report-output td {
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+        .light-theme #report-output code {
+            background: rgba(0, 0, 0, 0.05); color: #1d4ed8;
+        }
+        .light-theme #report-output pre {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        .light-theme #sidebar {
+            background: rgba(249, 250, 251, 0.9); border-color: rgba(0, 0, 0, 0.1);
+        }
+        .light-theme #sidebar h2 { color: #111827; }
+        .light-theme #sidebar button { color: #6b7280; }
+        .light-theme #sidebar button:hover { color: #000000; }
+        .light-theme #sidebar a { color: #374151; }
+        .light-theme #sidebar a:hover { background: #dbeafe; color: #1d4ed8; }
+        
+        .light-theme #settings-panel, .light-theme #download-panel {
+            background: rgba(255, 255, 255, 0.8); 
+        }
+        .light-theme #settings-panel h3, .light-theme #download-panel h3 { color: #111827; }
+        .light-theme #settings-panel p, .light-theme #download-panel p { color: #374151; }
+        .light-theme #settings-panel .theme-btn {
+            background: #e5e7eb; color: #1f2937;
+        }
+        .light-theme #settings-panel .theme-btn:hover { background: #d1d5db; }
+        .light-theme #settings-panel .theme-btn.active {
+            background: #2563eb; color: #ffffff;
+        }
+        .light-theme #download-panel .download-btn {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .light-theme #download-panel .download-btn:hover {
+            background-color: #e5e7eb;
+        }
+        .light-theme #download-panel .download-btn.pdf:hover { background-color: #dc2626; color: white; }
+        .light-theme #download-panel .download-btn.docx:hover { background-color: #2563eb; color: white; }
+
+        /* --- Other styles (Unchanged) --- */
+        .gradient-text {
+            background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; text-fill-color: transparent;
+        }
+        
+        /* --- Report/Chat Styles (Unchanged) --- */
+        #report-output h1 { font-size: 2.25rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3b82f6; padding-bottom: 0.5rem; color: #ffffff; }
+        #report-output h2 { font-size: 1.875rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 1rem; color: #ffffff; }
+        #report-output h3 { font-size: 1.5rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #ffffff; }
+        #report-output p { line-height: 1.6; margin-bottom: 1.25rem; color: #d1d5db; }
+        #report-output ul, #report-output ol { margin-left: 1.5rem; margin-bottom: 1.25rem; list-style-position: outside; }
+        #report-output ul { list-style-type: disc; }
+        #report-output ol { list-style-type: decimal; }
+        #report-output li { margin-bottom: 0.5rem; }
+        #report-output strong { color: #ffffff; font-weight: 600; }
+        #report-output table { width: 100%; margin-bottom: 1.25rem; border-collapse: collapse; }
+        #report-output th, #report-output td { border: 1px solid rgba(255, 255, 255, 0.2); padding: 0.75rem; }
+        #report-output th { background: rgba(255, 255, 255, 0.1); }
+        #report-output code { background: rgba(0, 0, 0, 0.3); color: #f0abfc; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+        #report-output pre { background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        #report-output pre code { background: none; padding: 0; }
+        #settings-overlay, #download-overlay { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+        .theme-btn.active { background: #3b82f6; color: #ffffff; font-weight: 600; }
+        #download-panel .download-btn { display: block; width: 100%; text-align: center; padding-top: 0.75rem; padding-bottom: 0.75rem; font-size: 1rem; font-weight: 500; border-radius: 0.5rem; background-color: #374151; color: #f3f4f6; transition: background-color 0.2s ease; }
+        #download-panel .download-btn:hover { background-color: #4b5563; }
+        #download-panel .download-btn.pdf:hover { background-color: #dc2626; color: white; }
+        #download-panel .download-btn.docx:hover { background-color: #2563eb; color: white; }
+        .chat-turn { display: flex; gap: 1rem; margin-bottom: 2rem; line-height: 1.7; }
+        .chat-icon { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; }
+        .chat-icon.bot-icon { background-color: #7c3aed; }
+        .chat-icon.user-icon { background-color: #2563eb; font-size: 0.875rem; }
+        .chat-content { flex-grow: 1; padding-top: 0.25rem; }
+        .chat-content.user-content { font-weight: 500; font-size: 1.125rem; color: #f3f4f6; }
+        .chat-content.bot-content p { margin-bottom: 1rem; }
+        .chat-content.bot-content ul, .chat-content.bot-content ol { margin-left: 1.5rem; margin-bottom: 1rem; list-style-position: outside; }
+        .chat-content.bot-content ul { list-style-type: disc; }
+        .chat-content.bot-content ol { list-style-type: decimal; }
+        .chat-content.bot-content li { margin-bottom: 0.5rem; }
+        .chat-content.bot-content strong, .chat-content.bot-content b { color: #ffffff; font-weight: 600; }
+        .chat-content.bot-content code { background: rgba(0, 0, 0, 0.3); color: #f0abfc; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; }
+        .chat-content.bot-content pre { background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .chat-content.bot-content pre code { background: none; padding: 0; }
+        #chat-input-form { position: relative; }
+        #chat-input { width: 100%; padding: 1.25rem 4rem 1.25rem 1.5rem; border-radius: 1rem; background: rgba(10, 20, 40, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); color: white; font-size: 1rem; transition: all 0.2s ease; }
+        #chat-input:focus { outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4); border-color: #3b82f6; }
+        #chat-submit-btn { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; background-color: #2563eb; color: white; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s ease; }
+        #chat-submit-btn:hover { background-color: #1d4ed8; }
+        #chat-submit-btn:disabled { background-color: #374151; opacity: 0.6; cursor: not-allowed; }
+        .light-theme .chat-content.user-content { color: #1f2937; }
+        .light-theme .chat-content.bot-content strong, .light-theme .chat-content.bot-content b { color: #000000; }
+        .light-theme .chat-content.bot-content code { background: rgba(0, 0, 0, 0.05); color: #1d4ed8; }
+        .light-theme .chat-content.bot-content pre { background: rgba(0, 0, 0, 0.05); }
+        .light-theme #chat-input { background: #ffffff; border-color: #d1d5db; color: #111827; }
+        .light-theme #chat-input:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2); }
+        .light-theme #chat-submit-btn { background-color: #2563eb; }
+        .light-theme #chat-submit-btn:hover { background-color: #1d4ed8; }
+        .light-theme #chat-submit-btn:disabled { background-color: #d1d5db; opacity: 0.8; }
+        .typing-cursor { width: 10px; height: 1.5rem; background-color: #f3f4f6; border-radius: 2px; animation: blink 1s infinite; }
+        .light-theme .typing-cursor { background-color: #1f2937; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        
+        /* ---
+        --- ========================================
+        --- SIDEBAR STYLES (Unchanged from last time)
+        --- ========================================
+        */
+        
+        .nav-text {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease-in-out, max-width 0.3s ease-in-out;
+            white-space: nowrap;
+            max-width: 0; 
+            overflow: hidden; 
+        }
+
+        .sidebar-title {
+            font-size: 30px; 
+            font-weight: 600; 
+            color: #e0e0e0;
+            white-space: nowrap;
+            opacity: 0;
+            max-width: 0;
+            overflow: hidden;
+            transition: opacity 0.2s ease-in-out, max-width 0.3s ease-in-out;
+        }
+        .light-theme .sidebar-title {
+            color: #111827;
+        }
+
+        #sidebar.is-expanded {
+            width: 18rem; 
+        }
+
+        #sidebar.is-expanded .nav-text,
+        #sidebar.is-expanded .sidebar-title {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0.1s;
+            max-width: 15rem; 
+        }
+
+        .nav-links-btn {
+            display: none; 
+        }
+        #sidebar.is-expanded .nav-links-btn {
+            display: flex;
+            justify-content: flex-start;
+            gap: 0.75rem; 
+        }
+
+        .sidebar-btn {
+            justify-content: center;
+            width: 100%;
+            transition: width 0.3s ease-in-out; 
+        }
+        
+        #sidebar.is-expanded .sidebar-btn {
+            justify-content: center;
+            width: auto; 
+        }
+        
+        #sidebar.is-expanded #settings-btn-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+ 
+        #settings-open-btn {
+            width: 100%; 
+            justify-content: center;
+            transition: width 0.3s ease-in-out; 
+        }
+        
+        #sidebar.is-expanded #settings-open-btn {
+            width: auto; 
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        /* ---
+        --- ========================================
+        --- NEW CUSTOM SELECT ARROW
+        --- ========================================
+        */
+        .custom-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            /* Dark theme arrow (default) */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.25em 1.25em;
+            padding-right: 2.5rem; /* Make space for the icon */
+        }
+
+        /* Light theme override for the arrow */
+        .light-theme .custom-select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f2937' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        }
+
+
+        /* --- Custom Scrollbar (Unchanged) --- */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.2); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.4); }
+        .light-theme .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.2); }
+        .light-theme .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(0, 0, 0, 0.4); }
+        
+    </style>
+</head>
+<body class="min-h-screen flex">
+    
+    <nav id="sidebar" class="flex flex-col h-screen w-20 glass-container rounded-none transition-all duration-300 ease-in-out">
+        
+        <div class="p-4">
+            <div class="flex items-center">
+                <button id="menu-toggle-btn" class="sidebar-btn flex items-center p-3 rounded-lg text-gray-300 hover:bg-blue-600 hover:text-white transition-all">
+                    <svg class="w-7 h-7 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+                <h2 class="sidebar-title ml-2">ScholarForge</h2>
+            </div>
+        </div>
+
+        <div class="flex-grow p-4 space-y-4">
+            
+            <a href="{{ url_for('index') }}" class="nav-links-btn flex items-center p-3 rounded-lg text-gray-300 hover:bg-blue-600 hover:text-white transition-all">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span class="nav-text font-medium">Report Generator</span>
+            </a>
+            
+            <a href="{{ url_for('chat_page') }}" class="nav-links-btn flex items-center p-3 rounded-lg text-gray-300 hover:bg-blue-600 hover:text-white transition-all">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <span class="nav-text font-medium">AI Assistant</span>
+            </a>
+        </div>
+
+        <div id="settings-btn-wrapper" class="p-4 border-t border-gray-700">
+            
+            <button id="settings-open-btn" class="flex items-center p-3 rounded-lg text-gray-300 hover:bg-blue-600 hover:text-white transition-all">
+                <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="nav-text font-medium">Settings</span>
+            </button>
+        </div>
+    </nav>
+    
+    <div id="main-content" class="flex-1 h-screen flex flex-col overflow-hidden">
+        
+        {% block content %}{% endblock %}
+
+    </div>
+    
+    <div id="settings-overlay" class="fixed inset-0 z-[55] hidden"></div>
+    <div id="settings-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg z-[60] glass-container p-6 hidden transition-all duration-300">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-semibold text-white">Settings</h3>
+            <button id="settings-close-btn" class="text-gray-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="space-y-6">
+            <div class="grid grid-cols-3 items-center gap-4">
+                <p class="col-span-1 font-medium text-gray-200">Theme</p>
+                <div class="col-span-2 flex justify-end gap-2">
+                    <button id="theme-light-btn" class="theme-btn px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all">Light</button>
+                    <button id="theme-dark-btn" class="theme-btn px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all">Dark</button>
+                    <button id="theme-default-btn" class="theme-btn px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all">Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="download-overlay" class="fixed inset-0 z-[55] hidden"></div>
+    <div id="download-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm z-[60] glass-container p-6 hidden transition-all duration-300">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-semibold text-white">Download Report</h3>
+            <button id="download-close-btn" class="text-gray-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <form action="{{ url_for('download') }}" method="POST" class="block">
+                <input type="hidden" name="report_content" id="dl-content-pdf">
+                <input type="hidden" name="topic" id="dl-topic-pdf">
+                <input type="hidden" name="format" value="pdf">
+                <button type="submit" class="download-btn pdf">Download as PDF</button>
+            </form>
+            <form action="{{ url_for('download') }}" method="POST" class="block">
+                <input type="hidden" name="report_content" id="dl-content-docx">
+                <input type="hidden" name="topic" id="dl-topic-docx">
+                <input type="hidden" name="format" value="docx">
+                <button type="submit" class="download-btn docx">Download as DOCX</button>
+            </form>
+            <form action="{{ url_for('download') }}" method="POST" class="block">
+                <input type="hidden" name="report_content" id="dl-content-txt">
+                <input type="hidden" name="topic" id="dl-topic-txt">
+                <input type="hidden" name="format" value="txt">
+                <button type="submit" class="download-btn txt">Download as TXT</button>
+            </form>
+        </div>
+    </div>
+    
+    
+    <script>
+        // --- SIDEBAR LOGIC ---
+        const toggleBtn = document.getElementById('menu-toggle-btn');
+        const sidebar = document.getElementById('sidebar');
+        function toggleSidebar() {
+            sidebar.classList.toggle('is-expanded');
+        }
+        toggleBtn.onclick = toggleSidebar;
+
+        // --- SETTINGS PANEL & THEME LOGIC ---
+        const settingsOpenBtn = document.getElementById('settings-open-btn');
+        const settingsCloseBtn = document.getElementById('settings-close-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const themeLightBtn = document.getElementById('theme-light-btn');
+        const themeDarkBtn = document.getElementById('theme-dark-btn');
+        const themeDefaultBtn = document.getElementById('theme-default-btn');
+        const themeBtns = [themeLightBtn, themeDarkBtn, themeDefaultBtn];
+        function openSettings() {
+            settingsPanel.classList.remove('hidden');
+            settingsOverlay.classList.remove('hidden');
+        }
+        function closeSettings() {
+            settingsPanel.classList.add('hidden');
+            settingsOverlay.classList.add('hidden');
+        }
+        function applyTheme(theme) {
+            themeBtns.forEach(btn => btn.classList.remove('active'));
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+                document.body.classList.remove('dark-theme');
+                themeLightBtn.classList.add('active');
+                localStorage.setItem('theme', 'light');
+            } else if (theme === 'dark') {
+                document.body.classList.remove('light-theme');
+                document.body.classList.add('dark-theme');
+                themeDarkBtn.classList.add('active');
+                localStorage.setItem('theme', 'dark');
+            } else { // 'default'
+                document.body.classList.remove('light-theme');
+                document.body.classList.remove('dark-theme');
+                themeDefaultBtn.classList.add('active');
+                localStorage.setItem('theme', 'default');
+            }
+        }
+        settingsOpenBtn.onclick = openSettings;
+        settingsCloseBtn.onclick = closeSettings;
+        settingsOverlay.onclick = closeSettings;
+        themeLightBtn.onclick = () => applyTheme('light');
+        themeDarkBtn.onclick = () => applyTheme('dark');
+        themeDefaultBtn.onclick = () => applyTheme('default');
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'default';
+            applyTheme(savedTheme);
+        });
+        
+        // --- DOWNLOAD PANEL LOGIC ---
+        const downloadOpenBtn = document.getElementById('download-open-btn');
+        const downloadCloseBtn = document.getElementById('download-close-btn');
+        const downloadPanel = document.getElementById('download-panel');
+        const downloadOverlay = document.getElementById('download-overlay');
+
+        function openDownloadPanel() {
+            downloadPanel.classList.remove('hidden');
+            downloadOverlay.classList.remove('hidden');
+        }
+        function closeDownloadPanel() {
+            downloadPanel.classList.add('hidden');
+            downloadOverlay.classList.add('hidden');
+        }
+        if (downloadOpenBtn) {
+            downloadOpenBtn.onclick = openDownloadPanel;
+        }
+        downloadCloseBtn.onclick = closeDownloadPanel;
+        downloadOverlay.onclick = closeDownloadPanel;
+
+    </script>
+
+    {% block scripts %}{% endblock %}
+
+</body>
+</html>

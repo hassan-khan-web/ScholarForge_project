@@ -1,0 +1,271 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="w-full h-full overflow-y-auto p-4 md:p-8">
+
+    <main class="max-w-4xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold gradient-text">
+                AI Research Report Generator
+            </h1>
+            <p class="text-lg md:text-xl text-blue-200 mt-2">
+                Generate research reports with the power of AI.
+            </p>
+        </header>
+
+        <form id="report-form" class="glass-container p-6 shadow-xl transition-all duration-300">
+            
+            <div class="mb-6">
+                <label for="query" class="block text-sm font-medium text-gray-200 mb-2">1. Enter your research topic</label>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="query" name="query" 
+                           class="flex-grow w-full px-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-lg text-white placeholder-gray-400
+                                  focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300"
+                           placeholder="e.g., 'The impact of 5G on smart cities'" required>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label for="format-select" class="block text-sm font-medium text-gray-200 mb-2">2. Select a report format</label>
+                <select id="format-select" 
+                        class="custom-select w-full pl-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-lg text-white focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300">
+                    <option value="literature_review">Literature Review</option>
+                    <option value="case_study">Case Study</option>
+                    <option value="business_white_paper">Business White Paper</option>
+                    <option value="technical_manual">Technical Manual</option>
+                    <option value="journalistic_article">Journalistic/News Article</option>
+                    <option value="custom">Custom Format</option>
+                </select>
+            </div>
+
+            <div id="custom-format-container" class="mb-6" style="display: none;">
+                <label for="custom-format-input" class="block text-sm font-medium text-gray-200 mb-2">3. Enter your custom format</label>
+                <textarea id="custom-format-input" rows="10"
+                          class="w-full px-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-sm text-white placeholder-gray-400
+                                 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 font-mono"
+                          placeholder="Paste your custom report structure here. Use Markdown for headings (#, ##) and bold text (**bold**)..."></textarea>
+            </div>
+            
+            <div>
+                <button type="submit" id="submit-btn" 
+                        class="w-full px-8 py-4 font-semibold text-lg text-white rounded-xl shadow-lg transition-all duration-300
+                               bg-gradient-to-r from-blue-600 to-purple-600 
+                               hover:from-blue-500 hover:to-purple-500 
+                               hover:shadow-blue-500/50
+                               focus:outline-none focus:ring-4 focus:ring-blue-500/50
+                               disabled:opacity-50 disabled:cursor-wait">
+                    Generate Report
+                </button>
+            </div>
+        </form>
+
+        <div id="status-container" class="glass-container p-8 text-center mt-8" style="display: none;">
+            <div class="flex justify-center items-center mb-6">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-400"></div>
+            </div>
+            <h2 class="text-2xl font-semibold text-white mb-2">Generating Report...</h2>
+            <p id="status-text" class="text-lg text-blue-200">
+                Job submitted. This will take several minutes. Please wait.
+            </p>
+        </div>
+
+        <div id="results-container" class="glass-container mt-8" style="display: none;">
+            
+            <article id="report-output" class="p-6 md:p-10"></article>
+
+            <div id="download-section" class="p-6 border-t border-gray-700 text-center" style="display: none;">
+                 <button type="button" id="download-open-btn" 
+                         class="w-full sm:w-auto text-center px-8 py-3 font-medium text-white rounded-lg bg-green-600 hover:bg-green-700 transition-all duration-200 shadow-lg">
+                     Download Report
+                 </button>
+             </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // ---
+    // --- REPORT GENERATION JAVASCRIPT
+    // ---
+    const form = document.getElementById('report-form');
+    const queryInput = document.getElementById('query');
+    const submitBtn = document.getElementById('submit-btn');
+    const statusContainer = document.getElementById('status-container');
+    const statusText = document.getElementById('status-text');
+    const resultsContainer = document.getElementById('results-container');
+    const outputEl = document.getElementById('report-output');
+    const downloadSection = document.getElementById('download-section');
+
+    const formatSelect = document.getElementById('format-select');
+    const customFormatContainer = document.getElementById('custom-format-container');
+    const customFormatInput = document.getElementById('custom-format-input');
+    
+    let reportFormats = {};
+    let currentFormatKey = 'literature_review'; 
+    let currentFormatContent = '';
+    let intervalId; // Define intervalId in a scope accessible to both functions
+
+    // --- 1. FETCH FORMATS ON PAGE LOAD ---
+    async function fetchFormats() {
+        try {
+            const response = await fetch("{{ url_for('get_report_formats') }}");
+            if (!response.ok) {
+                throw new Error('Failed to load report formats.');
+            }
+            reportFormats = await response.json();
+            
+            formatSelect.value = 'literature_review';
+            currentFormatKey = 'literature_review';
+            currentFormatContent = reportFormats['literature_review'];
+            
+            // Set custom text area to be EMPTY (it gets "" from the server)
+            customFormatInput.value = reportFormats['custom']; 
+            
+            // Ensure the custom text area is HIDDEN by default
+            customFormatContainer.style.display = 'none';
+
+        } catch (err) {
+            console.error(err);
+            statusText.innerText = 'Error: Could not load report formats. Please refresh.';
+            statusContainer.style.display = 'block';
+        }
+    }
+    document.addEventListener('DOMContentLoaded', fetchFormats);
+
+    // --- 2. HANDLE FORMAT SELECTION CHANGES ---
+    formatSelect.onchange = () => {
+        const selectedFormat = formatSelect.value;
+        currentFormatKey = selectedFormat;
+        currentFormatContent = reportFormats[selectedFormat];
+        
+        if (selectedFormat === 'custom') {
+            customFormatContainer.style.display = 'block';
+            currentFormatContent = customFormatInput.value;
+        } else {
+            customFormatContainer.style.display = 'none';
+        }
+    };
+
+    // Update currentFormatContent whenever the user types in the custom box
+    customFormatInput.onchange = () => {
+        if (currentFormatKey === 'custom') {
+            currentFormatContent = customFormatInput.value;
+        }
+    };
+    
+    // --- 3. HANDLE FORM SUBMISSION ---
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const query = queryInput.value;
+
+        // Check for custom format content
+        if (currentFormatKey === 'custom') {
+            currentFormatContent = customFormatInput.value;
+        }
+
+        if (currentFormatKey === 'custom' && (!currentFormatContent || currentFormatContent.trim() === '')) {
+            statusContainer.style.display = 'block';
+            statusText.innerText = 'Error: "Custom Format" is selected, but the text box is empty. Please paste your format to continue.';
+            return; 
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Generating...';
+        resultsContainer.style.display = 'none';
+        downloadSection.style.display = 'none'; 
+        statusContainer.style.display = 'block';
+        statusText.innerText = 'Job submitted. This will take several minutes...';
+
+        try {
+            const startResponse = await fetch("{{ url_for('start_report') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    query: query,
+                    format_key: currentFormatKey, 
+                    format_content: currentFormatContent 
+                })
+            });
+
+            if (!startResponse.ok) {
+                const errData = await startResponse.json();
+                throw new Error(errData.error || 'Failed to start task. Check server logs.');
+            }
+
+            const data = await startResponse.json();
+            const taskId = data.task_id;
+
+            statusText.innerText = `Job ${taskId} is in the queue. Waiting for worker...`;
+            intervalId = setInterval(() => {
+                checkTaskStatus(taskId, query);
+            }, 3000); 
+
+        } catch (err) {
+            statusText.innerText = `Error: ${err.message}`;
+            resetForm();
+        }
+    };
+
+    // --- 4. CHECK TASK STATUS (Unchanged) ---
+    async function checkTaskStatus(taskId, query) {
+        try {
+            const statusResponse = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId));
+            if (!statusResponse.ok) {
+                throw new Error('Server error while checking status.');
+            }
+
+            const data = await statusResponse.json();
+
+            if (data.status === 'SUCCESS') {
+                clearInterval(intervalId);
+                statusContainer.style.display = 'none';
+                
+                outputEl.innerHTML = marked.parse(data.report_content);
+                
+                resultsContainer.style.display = 'block';
+                downloadSection.style.display = 'block';
+                
+                const reportContent = data.report_content;
+                
+                // PDF Form
+                document.getElementById('dl-content-pdf').value = reportContent;
+                document.getElementById('dl-topic-pdf').value = query;
+                
+                // DOCX Form
+                document.getElementById('dl-content-docx').value = reportContent;
+                document.getElementById('dl-topic-docx').value = query;
+
+                // TXT Form
+                document.getElementById('dl-content-txt').value = reportContent;
+                document.getElementById('dl-topic-txt').value = query;
+                
+                resetForm();
+
+            } else if (data.status === 'FAILURE') {
+                clearInterval(intervalId);
+                statusContainer.style.display = 'block';
+                statusText.innerText = `Error: ${data.error}`;
+                resetForm();
+
+            } else {
+                statusText.innerText = `${data.message} (Polling for task ${taskId})...`;
+            }
+
+        } catch (err) {
+            clearInterval(intervalId);
+            statusContainer.style.display = 'block';
+            statusText.innerText = `Polling Error: ${err.message}`;
+            resetForm();
+        }
+    }
+
+    // --- 5. RESET FORM (Unchanged) ---
+    function resetForm() {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Generate Report';
+    }
+</script>
+{% endblock %}

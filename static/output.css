@@ -1,0 +1,268 @@
+/* ---
+1. Import Google Font
+--- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ---
+2. Default (Blue Gradient) Theme
+--- */
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(300deg, #000428, #004e92, #070e34);
+    background-size: 400% 400%;
+    animation: gradientBG 25s ease infinite;
+    color: #e0e0e0;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* ---
+3. Core Components
+--- */
+.glass-container {
+    background: rgba(10, 20, 40, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; text-fill-color: transparent;
+}
+
+/* Overlays (for Settings & Download) */
+#settings-overlay, #download-overlay, #sidebar-overlay {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+
+.theme-btn.active {
+    background: #3b82f6; /* blue-600 */
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* ---
+4. Report Generator Page (`report_generator.html`)
+--- */
+#report-output h1 {
+    font-size: 2.25rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem;
+    border-bottom: 2px solid #3b82f6; padding-bottom: 0.5rem; color: #ffffff;
+}
+#report-output h2 {
+    font-size: 1.875rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 1rem; color: #ffffff;
+}
+#report-output h3 {
+    font-size: 1.5rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #ffffff;
+}
+#report-output p {
+    line-height: 1.6; margin-bottom: 1.25rem; color: #d1d5db;
+}
+#report-output ul, #report-output ol {
+    margin-left: 1.5rem; margin-bottom: 1.25rem; list-style-position: outside;
+}
+#report-output ul { list-style-type: disc; }
+#report-output ol { list-style-type: decimal; }
+#report-output li { margin-bottom: 0.5rem; }
+#report-output strong { color: #ffffff; font-weight: 600; }
+#report-output table {
+    width: 100%; margin-bottom: 1.25rem; border-collapse: collapse;
+}
+#report-output th, #report-output td {
+    border: 1px solid rgba(255, 255, 255, 0.2); padding: 0.75rem;
+}
+#report-output th {
+    background: rgba(255, 255, 255, 0.1);
+}
+#report-output code {
+    background: rgba(0, 0, 0, 0.3); color: #f0abfc; padding: 0.25rem 0.5rem; border-radius: 0.25rem;
+}
+#report-output pre {
+    background: rgba(0, 0, 0, 0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto;
+}
+#report-output pre code {
+    background: none; padding: 0;
+}
+
+
+/* Download Panel Buttons */
+#download-panel .download-btn {
+    display: block; width: 100%; text-align: center;
+    padding-top: 0.75rem; padding-bottom: 0.75rem;
+    font-size: 1rem; font-weight: 500; border-radius: 0.5rem;
+    background-color: #374151; /* gray-700 */
+    color: #f3f4f6; /* gray-100 */
+    transition: background-color 0.2s ease;
+}
+#download-panel .download-btn:hover {
+    background-color: #4b5563; /* gray-600 */
+}
+/* Specific hover colors */
+#download-panel .download-btn.pdf:hover { background-color: #dc2626; color: white; } /* red-600 */
+#download-panel .download-btn.docx:hover { background-color: #2563eb; color: white; } /* blue-600 */
+
+/* ---
+5. NEW: AI Assistant Page (`ai_assistant.html`)
+--- */
+
+/* Chat bubbles */
+.chat-bubble {
+    padding: 0.75rem 1.25rem;
+    border-radius: 1.25rem;
+    max-width: 80%;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+.chat-bubble.bot {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    align-self: flex-start;
+    border-bottom-left-radius: 0.25rem;
+}
+.chat-bubble.user {
+    background: linear-gradient(90deg, #2563eb, #7c3aed); /* blue-600 to purple-600 */
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 0.25rem;
+}
+
+/* Ensure markdown in bot bubbles is styled */
+.chat-bubble.bot p { margin-bottom: 0.75rem; }
+.chat-bubble.bot ul, .chat-bubble.bot ol { margin-left: 1.25rem; }
+.chat-bubble.bot code { color: #f0abfc; }
+
+/* Hook Button */
+#hook-button {
+    background: rgba(200, 200, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #000428;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+#hook-button:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* ---
+6. Dark Theme
+--- */
+body.dark-theme {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    animation: none;
+}
+.dark-theme .glass-container {
+    background: rgba(20, 20, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dark-theme #chat-bubble.bot {
+    background: rgba(30, 30, 30, 0.5);
+}
+
+/* ---
+7. Light Theme
+--- */
+body.light-theme {
+    background: #eef2f9;
+    color: #1f2937;
+    animation: none;
+}
+.light-theme .glass-container {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+.light-theme .gradient-text {
+    background: none; -webkit-text-fill-color: #1d4ed8; text-fill-color: #1d4ed8;
+}
+
+/* Light Theme: Inputs */
+.light-theme #query, .light-theme #chat-input {
+    background: #ffffff; border-color: #d1d5db; color: #111827;
+    --tw-placeholder-color: #6b7280; placeholder-color: var(--tw-placeholder-color);
+}
+.light-theme #status-text { color: #1d4ed8; }
+
+/* Light Theme: Report Output */
+.light-theme #report-output h1,
+.light-theme #report-output h2,
+.light-theme #report-output h3 { color: #111827; }
+.light-theme #report-output p { color: #374151; }
+.light-theme #report-output strong { color: #000000; }
+.light-theme #report-output th { background: #f3f4f6; }
+.light-theme #report-output th, .light-theme #report-output td {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+.light-theme #report-output code {
+    background: rgba(0, 0, 0, 0.05); color: #1d4ed8;
+}
+.light-theme #report-output pre {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Light Theme: Sidebar & Panels */
+.light-theme #sidebar,
+.light-theme #settings-panel,
+.light-theme #download-panel {
+    background: rgba(249, 250, 251, 0.9); border-color: rgba(0, 0, 0, 0.1);
+}
+.light-theme #sidebar h2,
+.light-theme #settings-panel h3,
+.light-theme #download-panel h3 { color: #111827; }
+
+.light-theme #sidebar button, .light-theme #menu-open-btn { color: #6b7280; }
+.light-theme #sidebar button:hover, .light-theme #menu-open-btn:hover { color: #000000; }
+.light-theme #sidebar a { color: #374151; }
+.light-theme #sidebar a:hover { background: #dbeafe; color: #1d4ed8; }
+.light-theme #menu-open-btn:hover { background: rgba(0, 0, 0, 0.05); }
+
+.light-theme #settings-panel p, .light-theme #download-panel p { color: #374151; }
+.light-theme #settings-panel .theme-btn {
+    background: #e5e7eb; color: #1f2937;
+}
+.light-theme #settings-panel .theme-btn:hover { background: #d1d5db; }
+.light-theme #settings-panel .theme-btn.active {
+    background: #2563eb; color: #ffffff;
+}
+.light-theme #download-panel .download-btn {
+    background-color: #f3f4f6; color: #374151;
+}
+.light-theme #download-panel .download-btn:hover {
+    background-color: #e5e7eb;
+}
+.light-theme #download-panel .download-btn.pdf:hover { background-color: #dc2626; color: white; }
+.light-theme #download-panel .download-btn.docx:hover { background-color: #2563eb; color: white; }
+
+/* Light Theme: Chat Page */
+.light-theme .chat-bubble.bot {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.light-theme .chat-bubble.user {
+    background: #2563eb; /* Solid blue */
+}
+.light-theme #hook-button {
+    background: #ffffff;
+    color: #1d4ed8;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.light-theme #hook-button:hover {
+    background: #f9fafb;
+}

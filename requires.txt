@@ -1,0 +1,13 @@
+serpapi
+google-generativeai
+Flask
+python-dotenv
+ipykernel
+python-docx 
+reportlab
+BeautifulSoup4
+requests
+celery 
+redis
+markdown 
+lxml

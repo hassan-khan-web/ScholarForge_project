@@ -1,0 +1,278 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<!-- 
+  This main tag is the flex container from layout.html.
+  We make it a flex-col itself to create the sticky-footer layout.
+-->
+<main class="w-full h-full flex flex-col max-w-4xl mx-auto">
+
+    <!-- 
+      1. NEW: Welcome Container
+      - This is now a direct child of 'main' and is a sibling to the chat container.
+      - It's visible by default and will be hidden by JS.
+    -->
+    <div id="welcome-container" class="flex-1 w-full h-full flex flex-col justify-center items-center p-6">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold gradient-text">
+                AI Research Assistant
+            </h1>
+            <p class="text-lg md:text-xl text-blue-200 mt-4">
+                I’m here to accelerate your research—just point me at the problem
+            </p>
+        </header>
+    </div>
+
+    <!-- 
+      2. Chat History
+      - 'flex-1' makes it fill all available vertical space.
+      - 'overflow-y-auto' makes ONLY this section scroll.
+      - 'custom-scrollbar' class added for styling.
+      - *** NEW: 'hidden' class added. This will be removed by JS. ***
+    -->
+    <div id="chat-container" class="flex-1 w-full overflow-y-auto custom-scrollbar hidden">
+        <!-- 
+          Chat Feed
+          This is where the turns will be added. It's inside the scroller.
+        -->
+        <div id="chat-messages" class="w-full p-6">
+            <!-- Chat turns will be appended here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- 
+      Hook Button (Stays hidden, logic is the same) 
+      It's positioned relative to the chat-container
+    -->
+    <button id="hook-button" class="hidden absolute z-10 p-2 px-4 rounded-md shadow-lg">
+        Hook
+    </button>
+
+    <!-- 
+      3. Input Bar Area
+      - This container is NOT inside the scrolling div.
+      - It's the second flex item in the main-content, so it sticks to the bottom.
+    -->
+    <div id="chat-input-container" class="w-full py-4 px-6">
+        <form id="chat-input-form" class="w-full max-w-4xl mx-auto">
+            <input type="text" id="chat-input" 
+                   placeholder="Ask a follow-up question..." required>
+            <button type="submit" id="chat-submit-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                </svg>
+            </button>
+        </form>
+    </div>
+</main>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // ---
+    // --- NEW GEMINI-STYLE CHAT SCRIPT
+    // ---
+    
+    const chatForm = document.getElementById('chat-input-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatContainer = document.getElementById('chat-container'); // The scrolling part
+    const chatMessages = document.getElementById('chat-messages'); // The content inside
+    const chatSubmitBtn = document.getElementById('chat-submit-btn');
+
+    // --- NEW: Welcome Container Logic ---
+    const welcomeContainer = document.getElementById('welcome-container');
+    let isFirstMessage = true; // Flag to hide the welcome screen
+
+    let typingInterval; // To store the interval for the typing effect
+
+    chatForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const message = chatInput.value;
+        if (!message.trim()) return;
+
+        // --- NEW: Hide welcome screen on first message ---
+        if (isFirstMessage) {
+            welcomeContainer.style.display = 'none';
+            // --- THIS IS THE FIX ---
+            // Remove 'hidden' to show the (empty) chat container
+            chatContainer.classList.remove('hidden'); 
+            isFirstMessage = false;
+        }
+        // --- END NEW ---
+
+        chatSubmitBtn.disabled = true;
+
+        // 1. Add the user's message to the feed
+        appendTurn('user', message);
+        chatInput.value = '';
+
+        // 2. Create a new, empty bot turn and get its content element
+        const botContentElement = appendTurn('bot', '');
+
+        try {
+            // 3. Send to backend
+            const response = await fetch("{{ url_for('handle_chat') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'A server error occurred.');
+            }
+
+            const data = await response.json();
+
+            // 4. Start the typewriter effect with the response
+            if (data.error) {
+                typewriterEffect(botContentElement, `Error: ${data.error}`);
+            } else {
+                typewriterEffect(botContentElement, data.response);
+            }
+
+        } catch (err) {
+            // Show error in the bot's response area
+            typewriterEffect(botContentElement, `Network Error: ${err.message}`);
+        } finally {
+             // Re-enable the button *after* streaming is done (handled in typewriterEffect)
+        }
+    };
+
+    /**
+     * Creates and appends a new chat turn (user or bot) to the DOM.
+     * @param {string} role - 'user' or 'bot'
+     * @param {string} text - The text content (for user) or empty (for bot)
+     * @returns {HTMLElement|null} - The content element if 'bot', null if 'user'
+     */
+    function appendTurn(role, text) {
+        const turnDiv = document.createElement('div');
+        turnDiv.classList.add('chat-turn');
+
+        const iconDiv = document.createElement('div');
+        iconDiv.classList.add('chat-icon');
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('chat-content');
+
+        if (role === 'user') {
+            iconDiv.classList.add('user-icon');
+            iconDiv.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" /></svg>`;
+            contentDiv.classList.add('user-content');
+            contentDiv.textContent = text;
+            
+            turnDiv.appendChild(iconDiv);
+            turnDiv.appendChild(contentDiv);
+            chatMessages.appendChild(turnDiv);
+            
+            // Scroll to the new turn
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return null;
+
+        } else { // role === 'bot'
+            iconDiv.classList.add('bot-icon');
+            iconDiv.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.846.813l2.846-.813a.75.75 0 01.544.721v2.846c0 .194.04.38.115.555l.813 2.846a3.75 3.75 0 010 2.846l-.813 2.846a.75.75 0 01-.115.555v2.846a.75.75 0 01-.544.721l-2.846-.813a3.75 3.75 0 00-2.846.813l-.813 2.846a.75.75 0 01-.721.544H9a.75.75 0 01-.721-.544l-.813-2.846a3.75 3.75 0 00-2.846-.813l-2.846.813a.75.75 0 01-.544-.721V15.5c0-.194-.04-.38-.115-.555l-.813-2.846a3.75 3.75 0 010-2.846l.813-2.846a.75.75 0 01.115-.555V4.5a.75.75 0 01.544-.721l2.846.813a3.75 3.75 0 002.846-.813l.813-2.846A.75.75 0 019 4.5zM12 8.25a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" clip-rule="evenodd" /></svg>`;
+            contentDiv.classList.add('bot-content');
+            contentDiv.innerHTML = `<div class="typing-cursor"></div>`; // Start with a cursor
+            
+            turnDiv.appendChild(iconDiv);
+            turnDiv.appendChild(contentDiv);
+            chatMessages.appendChild(turnDiv);
+            
+            // Scroll to the new empty turn
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return contentDiv; // Return the element we will type into
+        }
+    }
+
+    /**
+     * Simulates a typewriter effect by parsing and rendering Markdown word-by-word.
+     * @param {HTMLElement} element - The .bot-content element to type into.
+     * @param {string} fullText - The full response text from the AI.
+     */
+    function typewriterEffect(element, fullText) {
+        // Clear the typing cursor
+        element.innerHTML = '';
+        
+        // Split the text by spaces to get "words". This handles markdown better.
+        const words = fullText.split(/(\s+)/); // Split but keep spaces
+        let currentText = '';
+        let index = 0;
+        
+        // Clear any existing interval
+        if (typingInterval) {
+            clearInterval(typingInterval);
+        }
+
+        typingInterval = setInterval(() => {
+            if (index < words.length) {
+                currentText += words[index];
+                // On each step, re-parse the *entire* text.
+                // This makes markdown lists and code blocks build themselves visually.
+                element.innerHTML = marked.parse(currentText);
+                
+                // Keep scrolling to the bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                index++;
+            } else {
+                clearInterval(typingInterval);
+                chatSubmitBtn.disabled = false; // Re-enable button
+            }
+        }, 35); // Adjust typing speed (in ms)
+    }
+
+    // --- Hook Logic ---
+    const hookButton = document.getElementById('hook-button');
+    let selectedText = '';
+
+    chatContainer.addEventListener('mouseup', (event) => {
+        // Only trigger if the click is inside chat-messages
+        if (!event.target.closest('#chat-messages')) return;
+
+        const selection = window.getSelection().toString().trim();
+        if (selection.length > 0) {
+            selectedText = selection;
+            
+            const chatRect = chatContainer.getBoundingClientRect();
+            const relativeX = event.clientX - chatRect.left;
+            const relativeY = event.clientY - chatRect.top;
+
+            hookButton.style.left = `${relativeX + chatContainer.scrollLeft}px`;
+            hookButton.style.top = `${relativeY + chatContainer.scrollTop}px`;
+            hookButton.classList.remove('hidden');
+        } else {
+            hookButton.classList.add('hidden');
+        }
+    });
+
+    hookButton.onclick = async () => {
+        console.log('Hooking text:', selectedText);
+        
+        try {
+            // --
+            // --- THIS IS THE FIX ---
+            // ---
+            // Changed 'add-hook' (dash) to 'add_hook' (underscore)
+            const response = await fetch("{{ url_for('add_hook') }}", { 
+            // ---
+            // ---
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: selectedText })
+            });
+            const data = await response.json();
+            if(data.status === 'success') {
+                console.log('Hook saved!');
+            } else {
+                console.error('Failed to save hook:', data.message);
+            }
+        } catch (err) {
+            console.error('Error saving hook:', err);
+        }
+        
+        hookButton.classList.add('hidden');
+        window.getSelection().removeAllRanges();
+    };
+</script>
+{% endblock %}

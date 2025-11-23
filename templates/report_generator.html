@@ -1,271 +1,391 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-<div class="w-full h-full overflow-y-auto p-4 md:p-8">
+<style>
+    /* --- THEME SPECIFIC STYLES FOR REPORT PAPER --- */
 
-    <main class="max-w-4xl mx-auto">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-bold gradient-text">
-                AI Research Report Generator
-            </h1>
-            <p class="text-lg md:text-xl text-blue-200 mt-2">
-                Generate research reports with the power of AI.
-            </p>
-        </header>
+    /* Default & Dark Theme (Dark Paper, Light Text) */
+    #report-output {
+        background-color: #111827; /* Gray 900 */
+        color: #e5e7eb; /* Gray 200 */
+    }
+    #report-output h1, #report-output h2, #report-output h3, #report-output h4, #report-output strong, #report-output b {
+        color: #f9fafb; /* Gray 50 */
+    }
+    #report-output p, #report-output ul, #report-output ol, #report-output li {
+        color: #d1d5db; /* Gray 300 */
+    }
+    #report-output a {
+        color: #60a5fa; /* Blue 400 */
+    }
+    #report-output code {
+        background-color: #1f2937; /* Gray 800 */
+        color: #e5e7eb;
+    }
 
-        <form id="report-form" class="glass-container p-6 shadow-xl transition-all duration-300">
+    /* Light Theme Override (White Paper, Dark Text) */
+    .light-theme #report-output {
+        background-color: #ffffff;
+        color: #111827; /* Gray 900 */
+        border: 1px solid #e5e7eb;
+    }
+    .light-theme #report-output h1, .light-theme #report-output h2, .light-theme #report-output h3, .light-theme #report-output strong {
+        color: #000000;
+    }
+    .light-theme #report-output p, .light-theme #report-output li {
+        color: #374151; /* Gray 700 */
+    }
+    .light-theme #report-output a {
+        color: #2563eb; /* Blue 600 */
+    }
+    .light-theme #report-output code {
+        background-color: #f3f4f6; /* Gray 100 */
+        color: #1f2937;
+    }
+</style>
+
+<div class="w-full h-full overflow-y-auto relative custom-scrollbar">
+
+    <!-- MAIN CONTENT WRAPPER -->
+    <main class="max-w-5xl mx-auto px-4 py-10 min-h-full flex flex-col relative overflow-hidden">
+
+        <!-- 
+           SECTION 1: INPUT FORM 
+           Behaves as the default view. Slides away to the left on submit.
+        -->
+        <div id="input-section" class="flex-1 flex flex-col justify-center transition-all duration-700 ease-in-out transform translate-x-0 opacity-100">
             
-            <div class="mb-6">
-                <label for="query" class="block text-sm font-medium text-gray-200 mb-2">1. Enter your research topic</label>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <input type="text" id="query" name="query" 
-                           class="flex-grow w-full px-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-lg text-white placeholder-gray-400
-                                  focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300"
-                           placeholder="e.g., 'The impact of 5G on smart cities'" required>
+            <header class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold gradient-text mb-3 tracking-tight">
+                    Research Engine
+                </h1>
+                <p class="text-gray-400 text-sm md:text-base max-w-lg mx-auto">
+                    Generate comprehensive, citation-backed reports in minutes.
+                </p>
+            </header>
+
+            <form id="report-form" class="w-full max-w-2xl mx-auto bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 p-6 md:p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+                
+                <!-- Background glow -->
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-80"></div>
+
+                <!-- Topic Input -->
+                <div class="mb-6">
+                    <label for="query" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">Research Topic</label>
+                    <div class="relative">
+                        <input type="text" id="query" name="query" 
+                               class="w-full bg-gray-900/50 border border-gray-600 text-gray-200 text-base rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all placeholder-gray-600"
+                               placeholder="e.g. Quantum Computing in Healthcare..." required>
+                    </div>
+                </div>
+
+                <!-- Format & Length Selection -->
+                <div class="mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2 relative">
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">Structure</label>
+                            <select id="format-select" class="w-full bg-gray-900/50 border border-gray-600 text-gray-200 text-sm rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer transition-all">
+                                <option value="literature_review">Literature Review</option>
+                                <option value="case_study">Case Study</option>
+                                <option value="business_white_paper">Business White Paper</option>
+                                <option value="technical_manual">Technical Manual</option>
+                                <option value="journalistic_article">News Article</option>
+                                <option value="custom">Custom Structure...</option>
+                            </select>
+                        </div>
+
+                        <div class="relative">
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">Length</label>
+                            <select id="page-select" class="w-full bg-gray-900/50 border border-gray-600 text-gray-200 text-sm rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer transition-all">
+                                <option value="7">7 Pages</option>
+                                <option value="10">10 Pages</option>
+                                <option value="15" selected>15 Pages</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Format Area -->
+                <div id="custom-format-container" class="mb-6 hidden">
+                    <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2 ml-1">Define Your Structure</label>
+                    <textarea id="custom-format-input" rows="6"
+                              class="w-full bg-gray-900/80 border border-blue-500/30 text-gray-300 text-xs font-mono rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                              placeholder="# 1. Introduction..."></textarea>
+                </div>
+                
+                <button type="submit" id="submit-btn" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transform transition-all duration-200 active:scale-[0.98] flex justify-center items-center gap-2 group-hover:shadow-blue-600/30">
+                    <span>Start Research Agent</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- 
+           SECTION 2: PROGRESS ANIMATION (Scaled Down)
+           Replaces the input section in the same space.
+        -->
+        <div id="progress-section" class="hidden absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-500">
+            
+            <!-- Step 1: Search -->
+            <div id="step-1" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
+                <div class="w-14 h-14 rounded-full border-[3px] border-gray-700 border-t-blue-500 animate-spin mb-4 shadow-lg shadow-blue-500/20"></div>
+                <h2 class="text-2xl font-bold text-white mb-1">Analyzing Topic</h2>
+                <p class="text-blue-300 text-sm">Searching global databases...</p>
+            </div>
+
+            <!-- Step 2: Read/Summarize -->
+            <div id="step-2" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
+                <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center mb-4 shadow-lg shadow-purple-500/20">
+                    <svg class="w-7 h-7 text-purple-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">Reading Sources</h2>
+                <p class="text-purple-300 text-sm">Synthesizing key insights...</p>
+            </div>
+
+            <!-- Step 3: Write/Draft -->
+            <div id="step-3" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
+                <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-green-500 flex items-center justify-center mb-4 shadow-lg shadow-green-500/20">
+                     <svg class="w-7 h-7 text-green-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">Drafting Report</h2>
+                <p class="text-green-300 text-sm">Structuring arguments & citations...</p>
+            </div>
+
+            <!-- Step 4: Finalize -->
+            <div id="step-4" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
+                <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-cyan-500 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/20">
+                    <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">Finalizing</h2>
+                <p class="text-cyan-300 text-sm">Formatting document...</p>
+            </div>
+
+        </div>
+
+        <!-- 
+           SECTION 3: RESULTS 
+           Displays the final document.
+        -->
+        <div id="results-container" class="hidden flex-col w-full transition-opacity duration-700">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 bg-gray-800/80 backdrop-blur p-4 rounded-2xl border border-gray-700 sticky top-0 z-40 shadow-xl">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-green-500/10 rounded-lg">
+                        <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-medium text-sm">Report Generated</h3>
+                        <p class="text-xs text-gray-400" id="result-topic-display">Topic</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="downloadFile('pdf')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors">PDF</button>
+                    <button onclick="downloadFile('docx')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors">DOCX</button>
+                    <button onclick="resetView()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors">New Report</button>
                 </div>
             </div>
 
-            <div class="mb-6">
-                <label for="format-select" class="block text-sm font-medium text-gray-200 mb-2">2. Select a report format</label>
-                <select id="format-select" 
-                        class="custom-select w-full pl-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-lg text-white focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300">
-                    <option value="literature_review">Literature Review</option>
-                    <option value="case_study">Case Study</option>
-                    <option value="business_white_paper">Business White Paper</option>
-                    <option value="technical_manual">Technical Manual</option>
-                    <option value="journalistic_article">Journalistic/News Article</option>
-                    <option value="custom">Custom Format</option>
-                </select>
-            </div>
-
-            <div id="custom-format-container" class="mb-6" style="display: none;">
-                <label for="custom-format-input" class="block text-sm font-medium text-gray-200 mb-2">3. Enter your custom format</label>
-                <textarea id="custom-format-input" rows="10"
-                          class="w-full px-5 py-4 bg-gray-900/50 border border-gray-600 rounded-xl text-sm text-white placeholder-gray-400
-                                 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 font-mono"
-                          placeholder="Paste your custom report structure here. Use Markdown for headings (#, ##) and bold text (**bold**)..."></textarea>
-            </div>
-            
-            <div>
-                <button type="submit" id="submit-btn" 
-                        class="w-full px-8 py-4 font-semibold text-lg text-white rounded-xl shadow-lg transition-all duration-300
-                               bg-gradient-to-r from-blue-600 to-purple-600 
-                               hover:from-blue-500 hover:to-purple-500 
-                               hover:shadow-blue-500/50
-                               focus:outline-none focus:ring-4 focus:ring-blue-500/50
-                               disabled:opacity-50 disabled:cursor-wait">
-                    Generate Report
-                </button>
-            </div>
-        </form>
-
-        <div id="status-container" class="glass-container p-8 text-center mt-8" style="display: none;">
-            <div class="flex justify-center items-center mb-6">
-                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-400"></div>
-            </div>
-            <h2 class="text-2xl font-semibold text-white mb-2">Generating Report...</h2>
-            <p id="status-text" class="text-lg text-blue-200">
-                Job submitted. This will take several minutes. Please wait.
-            </p>
+            <!-- 
+               Report Paper
+               Classes are now handled by the CSS block above (for Light/Dark modes)
+            -->
+            <article id="report-output" 
+                     class="w-full p-8 md:p-12 rounded-lg shadow-2xl mx-auto min-h-[800px] 
+                            prose prose-sm md:prose-base max-w-none">
+                <!-- Markdown Content Injected Here -->
+            </article>
         </div>
 
-        <div id="results-container" class="glass-container mt-8" style="display: none;">
-            
-            <article id="report-output" class="p-6 md:p-10"></article>
-
-            <div id="download-section" class="p-6 border-t border-gray-700 text-center" style="display: none;">
-                 <button type="button" id="download-open-btn" 
-                         class="w-full sm:w-auto text-center px-8 py-3 font-medium text-white rounded-lg bg-green-600 hover:bg-green-700 transition-all duration-200 shadow-lg">
-                     Download Report
-                 </button>
-             </div>
-        </div>
     </main>
+
+    <div class="hidden">
+        <form id="download-form" action="{{ url_for('download') }}" method="POST">
+            <input type="hidden" name="report_content" id="dl-content">
+            <input type="hidden" name="topic" id="dl-topic">
+            <input type="hidden" name="format" id="dl-format">
+        </form>
+    </div>
 </div>
 {% endblock %}
 
 
 {% block scripts %}
 <script>
-    // ---
-    // --- REPORT GENERATION JAVASCRIPT
-    // ---
+    const inputSection = document.getElementById('input-section');
+    const progressSection = document.getElementById('progress-section');
+    const resultsContainer = document.getElementById('results-container');
     const form = document.getElementById('report-form');
     const queryInput = document.getElementById('query');
-    const submitBtn = document.getElementById('submit-btn');
-    const statusContainer = document.getElementById('status-container');
-    const statusText = document.getElementById('status-text');
-    const resultsContainer = document.getElementById('results-container');
-    const outputEl = document.getElementById('report-output');
-    const downloadSection = document.getElementById('download-section');
-
     const formatSelect = document.getElementById('format-select');
-    const customFormatContainer = document.getElementById('custom-format-container');
-    const customFormatInput = document.getElementById('custom-format-input');
-    
-    let reportFormats = {};
-    let currentFormatKey = 'literature_review'; 
-    let currentFormatContent = '';
-    let intervalId; // Define intervalId in a scope accessible to both functions
+    const pageSelect = document.getElementById('page-select');
+    const customContainer = document.getElementById('custom-format-container');
+    const customInput = document.getElementById('custom-format-input');
+    const outputEl = document.getElementById('report-output');
+    const resultTopicDisplay = document.getElementById('result-topic-display');
 
-    // --- 1. FETCH FORMATS ON PAGE LOAD ---
+    let reportFormats = {};
+    let currentReportContent = "";
+    let currentQuery = "";
+    let intervalId;
+    let currentStepIndex = 0; 
+
     async function fetchFormats() {
         try {
             const response = await fetch("{{ url_for('get_report_formats') }}");
-            if (!response.ok) {
-                throw new Error('Failed to load report formats.');
+            if (response.ok) {
+                reportFormats = await response.json();
+                customInput.value = reportFormats['custom'] || "";
             }
-            reportFormats = await response.json();
-            
-            formatSelect.value = 'literature_review';
-            currentFormatKey = 'literature_review';
-            currentFormatContent = reportFormats['literature_review'];
-            
-            // Set custom text area to be EMPTY (it gets "" from the server)
-            customFormatInput.value = reportFormats['custom']; 
-            
-            // Ensure the custom text area is HIDDEN by default
-            customFormatContainer.style.display = 'none';
-
-        } catch (err) {
-            console.error(err);
-            statusText.innerText = 'Error: Could not load report formats. Please refresh.';
-            statusContainer.style.display = 'block';
-        }
+        } catch (e) { console.error("Error fetching formats", e); }
     }
-    document.addEventListener('DOMContentLoaded', fetchFormats);
+    fetchFormats();
 
-    // --- 2. HANDLE FORMAT SELECTION CHANGES ---
     formatSelect.onchange = () => {
-        const selectedFormat = formatSelect.value;
-        currentFormatKey = selectedFormat;
-        currentFormatContent = reportFormats[selectedFormat];
-        
-        if (selectedFormat === 'custom') {
-            customFormatContainer.style.display = 'block';
-            currentFormatContent = customFormatInput.value;
+        if (formatSelect.value === 'custom') {
+            customContainer.classList.remove('hidden');
+            customInput.focus();
         } else {
-            customFormatContainer.style.display = 'none';
+            customContainer.classList.add('hidden');
         }
     };
 
-    // Update currentFormatContent whenever the user types in the custom box
-    customFormatInput.onchange = () => {
-        if (currentFormatKey === 'custom') {
-            currentFormatContent = customFormatInput.value;
-        }
-    };
-    
-    // --- 3. HANDLE FORM SUBMISSION ---
     form.onsubmit = async (e) => {
         e.preventDefault();
-        const query = queryInput.value;
+        currentQuery = queryInput.value;
+        let formatKey = formatSelect.value;
+        let formatContent = reportFormats[formatKey];
+        if (formatKey === 'custom') { formatContent = customInput.value; }
+        let pageCount = parseInt(pageSelect.value);
 
-        // Check for custom format content
-        if (currentFormatKey === 'custom') {
-            currentFormatContent = customFormatInput.value;
-        }
+        // --- ANIMATION START ---
+        // 1. Slide Input Section Out (Left)
+        inputSection.classList.add('transform', '-translate-x-full', 'opacity-0');
 
-        if (currentFormatKey === 'custom' && (!currentFormatContent || currentFormatContent.trim() === '')) {
-            statusContainer.style.display = 'block';
-            statusText.innerText = 'Error: "Custom Format" is selected, but the text box is empty. Please paste your format to continue.';
-            return; 
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.innerText = 'Generating...';
-        resultsContainer.style.display = 'none';
-        downloadSection.style.display = 'none'; 
-        statusContainer.style.display = 'block';
-        statusText.innerText = 'Job submitted. This will take several minutes...';
+        // 2. Wait for slide out, then hide it and show Progress
+        setTimeout(() => {
+            inputSection.classList.add('hidden');
+            progressSection.classList.remove('hidden');
+            // Reset and start Step 1
+            resetProgressVisuals();
+            updateProgressVisuals(1);
+        }, 500); 
 
         try {
-            const startResponse = await fetch("{{ url_for('start_report') }}", {
+            const startRes = await fetch("{{ url_for('start_report') }}", {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    query: query,
-                    format_key: currentFormatKey, 
-                    format_content: currentFormatContent 
-                })
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ query: currentQuery, format_key: formatKey, format_content: formatContent, page_count: pageCount })
             });
-
-            if (!startResponse.ok) {
-                const errData = await startResponse.json();
-                throw new Error(errData.error || 'Failed to start task. Check server logs.');
-            }
-
-            const data = await startResponse.json();
+            if (!startRes.ok) throw new Error("Failed to start");
+            const data = await startRes.json();
             const taskId = data.task_id;
-
-            statusText.innerText = `Job ${taskId} is in the queue. Waiting for worker...`;
-            intervalId = setInterval(() => {
-                checkTaskStatus(taskId, query);
-            }, 3000); 
-
-        } catch (err) {
-            statusText.innerText = `Error: ${err.message}`;
-            resetForm();
+            intervalId = setInterval(() => checkStatus(taskId), 2500);
+        } catch (err) { 
+            alert(err.message); 
+            resetView();
         }
     };
 
-    // --- 4. CHECK TASK STATUS (Unchanged) ---
-    async function checkTaskStatus(taskId, query) {
+    async function checkStatus(taskId) {
         try {
-            const statusResponse = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId));
-            if (!statusResponse.ok) {
-                throw new Error('Server error while checking status.');
-            }
-
-            const data = await statusResponse.json();
+            const res = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId));
+            const data = await res.json();
 
             if (data.status === 'SUCCESS') {
                 clearInterval(intervalId);
-                statusContainer.style.display = 'none';
+                updateProgressVisuals(4); // Ensure final step shows
                 
-                outputEl.innerHTML = marked.parse(data.report_content);
-                
-                resultsContainer.style.display = 'block';
-                downloadSection.style.display = 'block';
-                
-                const reportContent = data.report_content;
-                
-                // PDF Form
-                document.getElementById('dl-content-pdf').value = reportContent;
-                document.getElementById('dl-topic-pdf').value = query;
-                
-                // DOCX Form
-                document.getElementById('dl-content-docx').value = reportContent;
-                document.getElementById('dl-topic-docx').value = query;
-
-                // TXT Form
-                document.getElementById('dl-content-txt').value = reportContent;
-                document.getElementById('dl-topic-txt').value = query;
-                
-                resetForm();
+                // Delay to let Step 4 settle, then animate out
+                setTimeout(() => {
+                     updateProgressVisuals(5); // Move Step 4 up
+                     setTimeout(() => showResults(data.report_content), 600);
+                }, 1500);
 
             } else if (data.status === 'FAILURE') {
                 clearInterval(intervalId);
-                statusContainer.style.display = 'block';
-                statusText.innerText = `Error: ${data.error}`;
-                resetForm();
+                alert("Error: " + data.error);
+                resetView();
 
             } else {
-                statusText.innerText = `${data.message} (Polling for task ${taskId})...`;
+                const msg = data.message || "";
+                if (msg.includes("Step 1")) updateProgressVisuals(1);
+                else if (msg.includes("Step 2")) updateProgressVisuals(2);
+                else if (msg.includes("Step 3")) updateProgressVisuals(3);
+                else if (msg.includes("Step 4")) updateProgressVisuals(4);
             }
-
-        } catch (err) {
+        } catch (e) {
             clearInterval(intervalId);
-            statusContainer.style.display = 'block';
-            statusText.innerText = `Polling Error: ${err.message}`;
-            resetForm();
+            alert("Network error");
+            resetView();
         }
     }
 
-    // --- 5. RESET FORM (Unchanged) ---
-    function resetForm() {
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Generate Report';
+    // --- SEQUENTIAL STEP ANIMATION LOGIC ---
+    function updateProgressVisuals(activeStep) {
+        if (activeStep === currentStepIndex) return; 
+        currentStepIndex = activeStep;
+
+        const steps = [1, 2, 3, 4];
+
+        steps.forEach(step => {
+            const el = document.getElementById(`step-${step}`);
+            if (!el) return;
+
+            // Reset base classes
+            el.className = "progress-step absolute flex flex-col items-center transition-all duration-700 ease-in-out";
+
+            if (step < activeStep) {
+                // COMPLETED: Float UP and Fade OUT
+                el.classList.add('opacity-0', '-translate-y-24', 'scale-90', 'blur-sm');
+            } else if (step === activeStep) {
+                // ACTIVE: Center and Pulse
+                el.classList.add('opacity-100', 'translate-y-0', 'scale-110', 'z-10');
+            } else {
+                // PENDING: Wait BELOW (invisible)
+                el.classList.add('opacity-0', 'translate-y-24', 'scale-90');
+            }
+        });
     }
+
+    function resetProgressVisuals() {
+        currentStepIndex = 0;
+        const steps = [1, 2, 3, 4];
+        steps.forEach(step => {
+            const el = document.getElementById(`step-${step}`);
+            // Reset to "Pending" state (Below)
+            el.className = "progress-step absolute flex flex-col items-center transition-all duration-700 ease-in-out opacity-0 translate-y-24 scale-90";
+        });
+    }
+
+    function showResults(content) {
+        progressSection.classList.add('hidden');
+        resultsContainer.classList.remove('hidden');
+        currentReportContent = content;
+        resultTopicDisplay.innerText = currentQuery;
+        outputEl.innerHTML = marked.parse(content);
+    }
+
+    function resetView() {
+        resultsContainer.classList.add('hidden');
+        progressSection.classList.add('hidden');
+        
+        // Reset Input Section Position
+        inputSection.classList.remove('hidden');
+        // Small timeout to allow the class removal to register before animating back in
+        setTimeout(() => {
+            inputSection.classList.remove('-translate-x-full', 'opacity-0');
+        }, 50);
+
+        queryInput.value = "";
+        resetProgressVisuals();
+    }
+
+    window.downloadFile = function(format) {
+        const dlForm = document.getElementById('download-form');
+        document.getElementById('dl-content').value = currentReportContent;
+        document.getElementById('dl-topic').value = currentQuery;
+        document.getElementById('dl-format').value = format;
+        dlForm.submit();
+    };
 </script>
 {% endblock %}

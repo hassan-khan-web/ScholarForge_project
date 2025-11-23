@@ -1,47 +1,29 @@
 import os
 import serpapi
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 import requests
 from bs4 import BeautifulSoup
 import json
 import markdown
 from lxml import html
-import html as html_parser # Import for escaping
+import html as html_parser
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib import colors
-# --- END MODIFIED ---
 
-# ---
-# ---
 AI_MODEL_STRING = "x-ai/grok-4.1-fast:free"
-# ---
-# ---
-
 SEARCH_RESULTS_COUNT = 10
 MAX_RESULTS_TO_SCRAPE = 3
-# ---
-# --- END OF CONSTANTS ---
-# ---
-
 
 def _get_article_text(url: str) -> str:
-    """
-    Fetches and parses the main text content from a given URL.
-    Returns the text or an error message.
-    """
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
         }
         response = requests.get(url, headers=headers, timeout=10)
-        
         if response.status_code != 200:
             return f"Failed to retrieve content (Status code: {response.status_code})"
 
@@ -53,31 +35,20 @@ def _get_article_text(url: str) -> str:
             return "No paragraph text found on this page."
             
         return article_text
-    
     except requests.exceptions.RequestException as e:
         return f"Error during web request: {e}"
     except Exception as e:
         return f"Error parsing page: {e}"
-# --- END OF HELPER FUNCTION ---
-
 
 def get_search_results(query: str) -> str:
-    """
-    This function uses SerpApi and is unchanged.
-    """
     try:
         api_key = os.environ.get("API_KEY") 
         if not api_key:
             return "Error: API_KEY environment variable not set."
             
         params = {
-            "q": query,
-            "location": "India",
-            "hl": "en",
-            "gl": "us",
-            "num": SEARCH_RESULTS_COUNT, # This line now works
-            "api_key": api_key,
-            "engine": "google"
+            "q": query, "location": "India", "hl": "en", "gl": "us",
+            "num": SEARCH_RESULTS_COUNT, "api_key": api_key, "engine": "google"
         }
 
         client = serpapi.Client()
@@ -94,16 +65,13 @@ def get_search_results(query: str) -> str:
                 title = result.get('title', 'No Title')
 
                 full_content_text = ""
-                if i < MAX_RESULTS_TO_SCRAPE: # This line now works
+                if i < MAX_RESULTS_TO_SCRAPE:
                     print(f"Fetching full text from: {source_url}...")
                     full_content_text = _get_article_text(source_url)
                     full_content_text = f"\n\n--- Full Text (Source {i+1}) ---\n{full_content_text}\n--- End of Full Text ---"
 
                 formatted_snippet = (
-                    f"[{i+1}] Title: {title}\n"
-                    f"Snippet: {snippet_text}\n"
-                    f"Source: {source_url}"
-                    f"{full_content_text}" 
+                    f"[{i+1}] Title: {title}\nSnippet: {snippet_text}\nSource: {source_url}{full_content_text}" 
                 )
                 snippets.append(formatted_snippet)
 
@@ -111,12 +79,10 @@ def get_search_results(query: str) -> str:
 
     except Exception as e:
         return f"An unexpected error occurred during search: {e}"
-# --- END OF MODIFIED FUNCTION ---
 
-
-def generate_summary(search_content: str, topic: str) -> str:
+def generate_summary(search_content: str, topic: str, page_count: int) -> str:
     """
-    Generates summary using OpenRouter API. (Unchanged)
+    Generates summary. Accepts 'page_count' to instruct AI on depth.
     """
     try:
         api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -134,23 +100,19 @@ def generate_summary(search_content: str, topic: str) -> str:
             
             For each major theme you identify, you MUST provide a deep, multi-paragraph
             explanation, citing the sources.
-            
-            This output will be the ONLY source material for a full 15-page report,
-            so you MUST be exhaustive and detailed. Do not skip details.
             '''
-            f"Your analysis is for the topic: '{topic}'. Use citation numbers [1], [2], etc. for clarity and explain in detail."
+            f"This output will be the ONLY source material for a full {page_count}-page report, "
+            "so you MUST be exhaustive and detailed. Do not skip details.\n"
+            f"Your analysis is for the topic: '{topic}'. Use citation numbers [1], [2], etc."
         )
 
         prompt = f"Search Results:\n{search_content}"
 
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}", 
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": AI_MODEL_STRING, # This line now works
+                "model": AI_MODEL_STRING,
                 "messages": [
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": prompt}
@@ -158,71 +120,46 @@ def generate_summary(search_content: str, topic: str) -> str:
                 "temperature": 0.4
             })
         )
-        
         response.raise_for_status() 
-
         result = response.json()
         return result['choices'][0]['message']['content'] or "No summary generated."
 
-    except requests.exceptions.HTTPError as e:
-        return f"OpenRouter API Error: {e.response.status_code} {e.response.text}"
     except Exception as e:
-        return f"An unexpected error occurred during summarization: {e}"
+        return f"Summarization Error: {e}"
 
-
-def generate_report(summary: str, topic: str, user_format: str) -> str:
+def generate_report(summary: str, topic: str, user_format: str, page_count: int) -> str:
     """
-    Generates report using OpenRouter API. (Unchanged)
+    Generates report. Accepts 'page_count' to instruct AI on length.
     """
     try:
         api_key = os.environ.get("OPENROUTER_API_KEY")
         if not api_key:
             return "Error: OPENROUTER_API_KEY environment variable not set."
 
-        final_instruction = (
-            "IMPORTANT: For all section headings ... "
-            "Apply this descriptive logic to ALL headings and subheadings."
-        )
-
-        # ---
-        # --- !!! THIS IS THE UPDATED, MORE AGGRESSIVE PROMPT !!! ---
-        # ---
         system_instruction = (
             "You are a world-class research analyst and professional report writer. "
-            f"Your task is to generate a comprehensive, 15-page report on the topic: '{topic}'.\n\n"
+            f"Your task is to generate a comprehensive, {page_count}-page report on the topic: '{topic}'.\n\n"
             
-            # --- NEW CRITICAL REQUIREMENT ---
-            "**CRITICAL CONTENT REQUIREMENT: READ AND OBEY**\n"
+            "**CRITICAL CONTENT REQUIREMENT:**\n"
             "You MUST ensure **even content distribution**. The last sections of the report MUST be as detailed as the first.\n"
-            "I am seeing reports that start strong but end with 1-2 line 'filler' sections. This is unacceptable.\n\n"
-            "**YOUR NON-NEGOTIABLE RULE:**\n"
-            "Every single sub-section (e.g., 2.1, 2.1.1, 2.1.2, 3.1) **MUST** contain a minimum of **5 to 6 full lines of text**. "
-            "Do not, under any circumstances, write a 1-2 line paragraph to simply fill a heading.\n\n"
-            "**I will consider the generation a FAILURE if any section is shorter than 5-6 lines.** "
-            "Use your source summary to its full potential. Elaborate. Explain. Do not be brief."
-            # --- END OF NEW REQUIREMENT ---
+            "Every single sub-section (e.g., 2.1, 2.1.1) **MUST** contain a minimum of **5 to 6 full lines of text**.\n"
+            f"To achieve the {page_count}-page requirement, you must Elaborate, Explain, and Provide Examples for every point.\n\n"
             
-            "\n\nYou MUST follow this user-provided structure EXACTLY. ...\n\n"
-            f"USER-PROVIDED STRUCTURE:\n{user_format}\n\n"
-            f"FINAL INSTRUCTION: {final_instruction}"
+            "You MUST follow this user-provided structure EXACTLY:\n"
+            f"USER-PROVIDED STRUCTURE:\n{user_format}"
         )
-        # ---
-        # --- END OF UPDATED PROMPT ---
-        # ---
 
         prompt = (
-            "Here is the synthesized summary of my research findings. ... "
-            f"following the structure and instructions I provided.\n\nSUMMARY:\n{summary}"
+            "Here is the synthesized summary of my research findings. "
+            f"Generate the full {page_count}-page report following the structure provided.\n\n"
+            f"SUMMARY:\n{summary}"
         )
 
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}", 
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": AI_MODEL_STRING, # This line now works
+                "model": AI_MODEL_STRING,
                 "messages": [
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": prompt}
@@ -230,57 +167,47 @@ def generate_report(summary: str, topic: str, user_format: str) -> str:
                 "temperature": 0.4,
             })
         )
-        
         response.raise_for_status()
-
         result = response.json()
         return result['choices'][0]['message']['content'] or "No report generated."
 
-    except requests.exceptions.HTTPError as e:
-        return f"OpenRouter API Error: {e.response.status_code} {e.response.text}"
     except Exception as e:
-        return f"An unexpected error occurred during report generation: {e}"
-# --- END OF MODIFIED FUNCTION ---
+        return f"Report Generation Error: {e}"
 
-
-def run_ai_engine_with_return(query: str, user_format: str, task=None) -> tuple[str, str] | str: 
+def run_ai_engine_with_return(query: str, user_format: str, page_count: int = 15, task=None) -> tuple[str, str] | str: 
     """
-    Runs the full report generation pipeline. (Unchanged)
+    Runs the full report generation pipeline.
     """
-    
     def _update_status(message: str):
         print(message) 
         if task:
             task.update_state(state='PROGRESS', meta={'message': message})
 
-    if not query:
-        return "Please provide a search query."
-    
-    if not user_format or user_format.strip() == "":
-        return "Error: No report format was provided. Please select or enter a format."
+    if not query: return "Please provide a search query."
+    if not user_format: return "Error: No report format provided."
 
-    _update_status("Step 1/4: Fetching search results and full content...")
+    _update_status("Step 1/4: Fetching search results...")
     search_content = get_search_results(query)
     if search_content.startswith(("Error:", "No relevant")):
         return f"Failed to run search pipeline: {search_content}"
 
-    _update_status("Step 2/4: Generating structured summary...")
-    summary = generate_summary(search_content, query)
-    if summary.startswith(("Error:", "OpenRouter API Error:", "An unexpected error")):
+    _update_status(f"Step 2/4: Generating summary for {page_count} pages...")
+    summary = generate_summary(search_content, query, page_count)
+    if summary.startswith(("Error:", "Summarization Error")):
         return f"Failed to summarize: {summary}"
 
-    _update_status("Step 3/4: Generating full report...")
-    report_content = generate_report(summary, query, user_format)
+    _update_status(f"Step 3/4: Writing full {page_count}-page report...")
+    report_content = generate_report(summary, query, user_format, page_count)
     
-    if report_content.startswith(("Error:", "OpenRouter API Error:", "An unexpected error")):
+    if report_content.startswith(("Error:", "Report Generation Error")):
         return f"Failed to generate report: {report_content}"
         
     _update_status("Step 4/4: Pipeline complete.")
     return search_content, report_content
 
+# --- CONVERTERS (Unchanged) ---
 
 def convert_to_txt(report_content: str, filepath: str) -> str:
-    """ (Unchanged) """
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(report_content)
@@ -288,21 +215,9 @@ def convert_to_txt(report_content: str, filepath: str) -> str:
     except Exception as e:
         return f"Error creating TXT file: {e}"
 
-# ---
-# --- DOCX and PDF Converters with Markdown Styling
-# ---
-
-# ---
-# --- THIS FUNCTION IS CORRECT ---
-# ---
 def add_markdown_to_doc(doc, md_text):
-    """
-    Parses Markdown text and adds it to the DOCX document 
-    with heading and bold styling.
-    """
     html_content = markdown.markdown(md_text)
     tree = html.fromstring(f"<html><body>{html_content}</body></html>")
-
     for el in tree.xpath('//body/*'):
         if el.tag == 'h1':
             p = doc.add_paragraph(el.text_content().strip(), style='Heading 1')
@@ -318,20 +233,14 @@ def add_markdown_to_doc(doc, md_text):
             p.runs[0].font.bold = True
         elif el.tag in ['p', 'ul', 'ol', 'li']:
             is_list = el.tag in ['ul', 'ol', 'li']
-            
             if el.tag == 'p' and not el.text and not len(el):
                 doc.add_paragraph() 
                 continue
-
             style = 'List Bullet' if is_list else 'Normal'
             p = doc.add_paragraph(style=style)
-            
-            if el.text:
-                p.add_run(el.text)
-            
+            if el.text: p.add_run(el.text)
             for child in el:
                 text = child.text_content() or '' 
-                
                 run = None
                 if child.tag in ['strong', 'b']:
                     run = p.add_run(text)
@@ -341,183 +250,82 @@ def add_markdown_to_doc(doc, md_text):
                     run.font.italic = True
                 else:
                     run = p.add_run(text)
-                
-                if child.tail:
-                    p.add_run(child.tail)
+                if child.tail: p.add_run(child.tail)
         else:
             p = doc.add_paragraph(el.text_content().strip())
 
-# ---
-# --- THIS FUNCTION IS CORRECT ---
-# ---
 def convert_to_docx(report_content: str, topic: str, filepath: str) -> str:
     try:
         doc = Document()
         styles = doc.styles
-        
         styles['Heading 1'].font.name = 'Inter'
         styles['Heading 2'].font.name = 'Inter'
         styles['Heading 3'].font.name = 'Inter'
         styles['Normal'].font.name = 'Inter'
-        styles['List Bullet'].font.name = 'Inter'
-        
-        styles['List Bullet'].paragraph_format.left_indent = Pt(36)
         
         title = doc.add_heading(topic, level=0)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         title.runs[0].font.size = Pt(24)
         title.runs[0].font.bold = True
         doc.add_paragraph() 
-
         add_markdown_to_doc(doc, report_content)
-        
         doc.save(filepath)
         return f"Success: DOCX file created at {filepath}"
     except Exception as e:
         return f"Error creating DOCX file: {e}"
 
-
-# ---
-# --- THIS FUNCTION IS CORRECT ---
-# ---
 def _get_inner_html_for_reportlab(element):
-    """
-    Helper function to correctly build an HTML string for ReportLab's parser,
-    including text, child tags, and tail text. (Unchanged)
-    """
     inner_content_list = []
-    
-    if element.text:
-        inner_content_list.append(html_parser.escape(element.text))
-    
+    if element.text: inner_content_list.append(html_parser.escape(element.text))
     for child in element:
         inner_content_list.append(html.tostring(child, encoding='unicode'))
-        
-        if child.tail:
-            inner_content_list.append(html_parser.escape(child.tail))
-            
+        if child.tail: inner_content_list.append(html_parser.escape(child.tail))
     inner_html = "".join(inner_content_list)
-    
     inner_html = inner_html.replace('<strong>', '<b>').replace('</strong>', '</b>')
     inner_html = inner_html.replace('<em>', '<i>').replace('</em>', '</i>')
-    
     return inner_html
 
-
-# ---
-# --- !!! THIS IS THE FIXED PDF FUNCTION !!! ---
-# ---
 def convert_to_pdf(report_content: str, topic: str, filepath: str) -> str:
     try:
-        # --- MODIFIED ---
-        # We no longer use canvas. We use SimpleDocTemplate.
         margin = 1 * inch
-        doc = SimpleDocTemplate(
-            filepath,
-            pagesize=A4,
-            leftMargin=margin,
-            rightMargin=margin,
-            topMargin=margin,
-            bottomMargin=margin
-        )
-
+        doc = SimpleDocTemplate(filepath, pagesize=A4, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
         styles = getSampleStyleSheet()
         styles.add(ParagraphStyle(name='H1', fontSize=20, fontName='Helvetica-Bold', spaceAfter=14))
         styles.add(ParagraphStyle(name='H2', fontSize=16, fontName='Helvetica-Bold', spaceAfter=12))
         styles.add(ParagraphStyle(name='H3', fontSize=14, fontName='Helvetica-Bold', spaceAfter=10))
-        styles.add(ParagraphStyle(name='Body', fontSize=11, fontName='Helvetica', leading=14, spaceAfter=10, alignment=4)) # 4 = TA_JUSTIFY
+        styles.add(ParagraphStyle(name='Body', fontSize=11, fontName='Helvetica', leading=14, spaceAfter=10, alignment=4))
         styles.add(ParagraphStyle(name='List', fontSize=11, fontName='Helvetica', leading=14, leftIndent=20, spaceAfter=5, bulletIndent=10))
 
-        flowables = [] # This list will hold our report content
-
-        # --- NEW: Add the Title ---
+        flowables = []
         topic_html = topic.replace('\n', '<br/>')
         title_style = styles['H1']
-        title_style.alignment = 1 # TA_CENTER
+        title_style.alignment = 1 
         flowables.append(Paragraph(topic_html, title_style))
-        flowables.append(Spacer(1, 0.25 * inch)) # Add space after title
+        flowables.append(Spacer(1, 0.25 * inch))
 
-        # --- MODIFIED ---
-        # 1. Add the 'nl2br' extension. This tells the markdown parser to
-        #    convert single newlines into <br> tags, which ReportLab understands.
         html_content = markdown.markdown(report_content, extensions=['nl2br'])
-        
         tree = html.fromstring(f"<html><body>{html_content}</body></html>")
         
-        # --- MODIFIED: This loop now just populates the flowables list ---
         for el in tree.xpath('//body/*'):
-            
-            # --- NEW: Use inner_html for ALL tags to preserve bold/italic
             inner_html = _get_inner_html_for_reportlab(el)
-            
-            # ---
-            # --- !!! THIS IS THE TRACEBACK FIX !!! ---
-            # ---
-            # ReportLab's parser crashes on <br> but loves <br/>
-            # We must do this replacement *after* getting the inner_html.
             inner_html = inner_html.replace('<br>', '<br/>')
-            # ---
-            # --- !!! END OF FIX !!! ---
-            # ---
             
-            if el.tag == 'h1':
-                if inner_html.strip(): 
-                    flowables.append(Paragraph(inner_html, styles['H1']))
-            elif el.tag == 'h2':
-                if inner_html.strip(): 
-                    flowables.append(Paragraph(inner_html, styles['H2']))
-            elif el.tag == 'h3':
-                if inner_html.strip(): 
-                    flowables.append(Paragraph(inner_html, styles['H3']))
-            
-            elif el.tag == 'p':
-                # This check correctly skips empty <p></p> tags from \n\n
-                if inner_html.strip():
-                    flowables.append(Paragraph(inner_html, styles['Body']))
-                    
+            if el.tag == 'h1': flowables.append(Paragraph(inner_html, styles['H1']))
+            elif el.tag == 'h2': flowables.append(Paragraph(inner_html, styles['H2']))
+            elif el.tag == 'h3': flowables.append(Paragraph(inner_html, styles['H3']))
+            elif el.tag == 'p' and inner_html.strip(): flowables.append(Paragraph(inner_html, styles['Body']))
             elif el.tag in ['ul', 'ol']:
-                # --- NEW: Added list counter for <ol> tags ---
                 list_counter = 1
                 for li in el.xpath('.//li'):
-                    li_inner_html = _get_inner_html_for_reportlab(li)
-                    # --- ALSO FIX IT FOR LIST ITEMS ---
-                    li_inner_html = li_inner_html.replace('<br>', '<br/>')
-                    
+                    li_inner_html = _get_inner_html_for_reportlab(li).replace('<br>', '<br/>')
                     if li_inner_html.strip():
-                        if el.tag == 'ul':
-                            bullet = "&bull; "
-                        else: # el.tag == 'ol'
-                            bullet = f"{list_counter}. "
-                            list_counter += 1
-                        
+                        bullet = "&bull; " if el.tag == 'ul' else f"{list_counter}. "
+                        if el.tag == 'ol': list_counter += 1
                         flowables.append(Paragraph(f"{bullet}{li_inner_html}", styles['List']))
         
-        # --- MODIFIED ---
-        # Removed the entire manual drawing loop.
-        # This single command builds the entire multi-page PDF correctly.
         doc.build(flowables)
-        
         return f"Success: PDF file created at {filepath}"
     except Exception as e:
-        # Add more detail to the error
         import traceback
         print(traceback.format_exc())
         return f"Error creating PDF file: {e}"
-# --- END OF PDF FIX ---
-
-
-def convert_to_references_txt(search_content: str, topic: str) -> str:
-    """ (Unchanged) """
-    try:
-        topic_safe = "".join(c for c in topic if c.isalnum() or c in (' ', '_')).rstrip()
-        filepath = f"{topic_safe}_References.txt"
-        
-        header = f"--- Raw Search Results and Sources for: {topic.upper()} ---\n\n"
-        full_content = header + search_content
-        
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(full_content)
-        
-        return f"Success: References file created at {filepath}"
-    except Exception as e:
-        return f"Error creating References file: {e}"

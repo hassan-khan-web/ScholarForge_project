@@ -3,7 +3,6 @@ import urllib.parse
 import tempfile
 from dotenv import load_dotenv
 load_dotenv()
-
 from fastapi import FastAPI, Request, Form, BackgroundTasks, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -11,14 +10,11 @@ from fastapi.responses import JSONResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from celery.result import AsyncResult
-
-# --- Local Imports ---
 from task import generate_report_task, celery_app
 import AI_engine 
 import chat_engine 
 import report_formats
 
-# --- App Configuration ---sele
 app = FastAPI(title="ScholarForge")
 
 # Add Session Middleware (Replaces Flask app.secret_key)

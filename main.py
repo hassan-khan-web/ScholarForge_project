@@ -18,7 +18,7 @@ import report_formats
 app = FastAPI(title="ScholarForge")
 
 # Add Session Middleware (Replaces Flask app.secret_key)
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("FLASK_SECRET_KEY", "secret"))
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("APP_SECRET_KEY", "secret"))
 
 # Setup Templates
 templates = Jinja2Templates(directory="templates")

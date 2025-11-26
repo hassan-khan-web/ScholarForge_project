@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Service 1: The Database
+  redis:
+    image: redis:alpine
+    container_name: scholarforge_redis
+    ports:
+      - "6379:6379"
+
+  # Service 2: The FastAPI Backend
+  web:
+    build: .
+    container_name: scholarforge_web
+    command: uvicorn main:app --host 0.0.0.0 --port 5000 --reload
+    volumes:
+      - .:/app  # <--- CRITICAL: This syncs your code edits to the running container
+    ports:
+      - "5000:5000"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      # Pass API keys from your local .env file
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - SERPAPI_KEY=${API_KEY}
+      - APP_SECRET_KEY=${APP_SECRET_KEY}
+    depends_on:
+      - redis
+
+  # Service 3: The Background Worker
+  worker:
+    build: .
+    container_name: scholarforge_worker
+    # The command to start the celery worker
+    command: celery -A task.celery_app worker --loglevel=info
+    volumes:
+      - .:/app  # Sync code here too
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
+    depends_on:
+      - redis

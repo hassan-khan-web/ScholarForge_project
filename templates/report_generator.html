@@ -35,49 +35,48 @@
             transition: all 0.3s ease;
         }
 
-        /* --- COMPONENT STYLING --- */
+        /* --- LAYOUT & LAYERING --- */
 
-        /* Sidebar & Z-Index Layering */
+        /* 1. SIDEBAR (Top Layer) */
         #sidebar {
             background: rgba(26, 27, 38, 0.95) !important; 
             border-right: 1px solid rgba(122, 162, 247, 0.1);
-            z-index: 50; /* Top layer */
+            z-index: 50; /* Always on top of history panel */
         }
 
-        /* HISTORY PANEL (SLIDE-OUT) */
+        /* 2. HISTORY PANEL (Dynamic Positioning) */
         #history-panel {
             position: absolute;
             top: 0;
             bottom: 0;
-            left: 4rem; /* Start right after the collapsed sidebar width (w-16) */
-            width: 20rem; /* Width of the history drawer */
+            left: 4rem; /* Starts exactly at the edge of the collapsed sidebar */
+            width: 20rem; 
             background: rgba(26, 27, 38, 0.98);
             border-right: 1px solid rgba(122, 162, 247, 0.1);
             backdrop-filter: blur(20px);
-            z-index: 40; /* Behind sidebar (50), above content (0) */
-            transform: translateX(-105%); /* Hide off-screen to the left */
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Smooth apple-like slide */
+            z-index: 40; /* Behind sidebar, above content */
+            transform: translateX(-100%); /* Hidden behind the sidebar */
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s ease; /* Animate slide AND left position */
             display: flex;
             flex-direction: column;
         }
         
         #history-panel.is-open {
-            transform: translateX(0); /* Slide in */
+            transform: translateX(0); /* Slides out to sit beside sidebar */
             box-shadow: 10px 0 30px -10px rgba(0, 0, 0, 0.5);
         }
 
-        /* Hide History Button by default (collapsed state) */
-        .history-btn-wrapper {
-            display: none;
-            opacity: 0;
-            transition: opacity 0.2s ease;
+        /* DYNAMIC POSITIONING: When Sidebar is Expanded, History moves right */
+        body.sidebar-expanded #history-panel {
+            left: 13rem; /* Width of expanded sidebar */
         }
-        
-        /* Show History Button only when sidebar expanded */
-        #sidebar.is-expanded .history-btn-wrapper {
-            display: flex;
-            opacity: 1;
+
+        /* 3. MAIN CONTENT (Bottom Layer) */
+        #main-content {
+            z-index: 0;
         }
+
+        /* --- COMPONENT STYLES --- */
 
         /* Inputs */
         #query, .custom-select { background: #16161e; border: 1px solid #292e42; color: #c0caf5; }
@@ -94,7 +93,7 @@
         .prose strong { color: #f3f4f6 !important; }
         .prose code { background-color: #1f2937; color: #e5e7eb !important; }
 
-        /* History List Items */
+        /* History Items */
         .history-item {
             padding: 14px;
             margin: 0 12px 8px 12px;
@@ -138,7 +137,7 @@
         .dark-theme .history-item:hover { background: #262626; border-color: #525252; }
 
         /* UTILS */
-        .gradient-text { background: linear-gradient(to right, #7aa2f7, #bb9af7); -webkit-background-clip: text; text-fill-color: transparent; }
+        .gradient-text { background: linear-gradient(to right, #7aa2f7, #bb9af7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-fill-color: transparent; }
         .light-theme .gradient-text { background: none; -webkit-text-fill-color: #2563eb; text-fill-color: #2563eb; }
         .dark-theme .gradient-text { background: linear-gradient(to right, #ffffff, #a3a3a3); -webkit-background-clip: text; text-fill-color: transparent; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -164,33 +163,33 @@
     </aside>
 
     <nav id="sidebar" class="flex flex-col h-screen w-16 glass-container border-r-0 rounded-r-2xl transition-all duration-300 ease-in-out shrink-0">
-        <div class="p-3 flex items-center justify-center h-16">
+        
+        <div class="p-3 flex items-center justify-end h-16" id="logo-container">
             <button id="menu-toggle-btn" class="p-2 rounded-xl transition-colors hover:bg-white/5 text-gray-400 hover:text-white shrink-0">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
         </div>
+
         <div class="flex-grow flex flex-col gap-1 p-2 mt-4">
             <a href="{{ url_for('index') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 <span class="nav-text font-medium">Research</span>
             </a>
             
-            <div class="history-btn-wrapper">
-                <button onclick="toggleHistoryPanel()" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 w-full justify-center">
-                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span class="nav-text font-medium">History</span>
-                </button>
-            </div>
+            <button onclick="toggleHistoryPanel()" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 w-full justify-center">
+                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="nav-text font-medium">History</span>
+            </button>
 
             <a href="{{ url_for('chat_page') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                 <span class="nav-text font-medium">Assistant</span>
             </a>
         </div>
-        <div class="p-2 mt-auto sidebar-footer" style="border-top: 1px solid rgba(122, 162, 247, 0.1);">
-            <button id="settings-open-btn" class="flex items-center justify-center w-full p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5">
-                <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <span class="nav-text font-medium">Settings</span>
+
+        <div class="p-2 mt-auto sidebar-footer settings-btn-wrapper" style="border-top: 1px solid rgba(122, 162, 247, 0.1);">
+            <button id="settings-open-btn" class="p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5" title="Settings">
+                <svg class="w-6 h-6 shrink-0 group-hover:rotate-90 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </button>
         </div>
     </nav>
@@ -321,30 +320,31 @@
             <input type="hidden" name="report_content" id="dl-content">
             <input type="hidden" name="topic" id="dl-topic">
             <input type="hidden" name="format" id="dl-format">
+            <input type="hidden" name="chart_path" id="dl-chart-path">
         </form>
     </div>
     
     <script>
         const sidebar = document.getElementById('sidebar');
         const menuBtn = document.getElementById('menu-toggle-btn');
-        menuBtn.onclick = () => sidebar.classList.toggle('is-expanded');
-
-        // SETTINGS
-        const settingsOverlay = document.getElementById('settings-overlay');
-        const settingsPanel = document.getElementById('settings-panel');
-        const openSettingsBtn = document.getElementById('settings-open-btn');
-        const closeSettingsBtn = document.getElementById('settings-close-btn');
-        
-        // HISTORY
         const historyPanel = document.getElementById('history-panel');
         const historyList = document.getElementById('history-list');
+        const outputEl = document.getElementById('report-output');
+        let currentChartPath = "";
 
+        // SIDEBAR TOGGLE
+        menuBtn.onclick = () => {
+            sidebar.classList.toggle('is-expanded');
+            document.body.classList.toggle('sidebar-expanded');
+        };
+
+        // HISTORY LOGIC
         function toggleHistoryPanel() {
+            // NOTE: Removed logic that closed sidebar. Now it stays open.
             historyPanel.classList.toggle('is-open');
             fetchHistory();
         }
         
-        // Close history when clicking on main content (optional UX improvement)
         document.getElementById('main-content').onclick = () => {
             if(historyPanel.classList.contains('is-open')) historyPanel.classList.remove('is-open');
         }
@@ -385,12 +385,18 @@
                 const data = await res.json();
                 if(data.content) {
                     currentQuery = data.topic;
-                    showResults(data.content);
+                    showResults(data.content); // If history had charts saved, we'd load them here
                 }
             } catch(e) {
                 alert("Failed to load report.");
             }
         }
+
+        // SETTINGS LOGIC
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const settingsPanel = document.getElementById('settings-panel');
+        const openSettingsBtn = document.getElementById('settings-open-btn');
+        const closeSettingsBtn = document.getElementById('settings-close-btn');
 
         function openSettings() {
             settingsOverlay.classList.remove('hidden'); settingsPanel.classList.remove('hidden');
@@ -440,7 +446,6 @@
         const pageSelect = document.getElementById('page-select');
         const customContainer = document.getElementById('custom-format-container');
         const customInput = document.getElementById('custom-format-input');
-        const outputEl = document.getElementById('report-output');
         const resultTopicDisplay = document.getElementById('result-topic-display');
 
         let reportFormats = {};
@@ -525,9 +530,17 @@
                         progressSection.classList.add('hidden');
                         resultsContainer.classList.remove('hidden');
                         setTimeout(() => resultsContainer.classList.remove('opacity-0'), 100);
-                        showResults(data.report_content);
-                        // Refresh history list so the new report appears immediately
-                        fetchHistory(); 
+                        
+                        // NEW: Handle Chart
+                        if (data.chart_path) {
+                            currentChartPath = data.chart_path;
+                            showResults(data.report_content, data.chart_path);
+                        } else {
+                            currentChartPath = "";
+                            showResults(data.report_content);
+                        }
+                        
+                        fetchHistory();
                     }, 1000);
 
                 } else if (data.status === 'FAILURE') {
@@ -540,7 +553,7 @@
                     if (msg.includes("Step 1")) updateProgressVisuals(1, msg);
                     else if (msg.includes("Step 2") || msg.includes("Step 3")) updateProgressVisuals(2, msg);
                     else if (msg.includes("Step 4")) updateProgressVisuals(3, msg);
-                    else if (msg.includes("Step 5")) updateProgressVisuals(4, msg);
+                    else if (msg.includes("Step 5") || msg.includes("Step 6")) updateProgressVisuals(4, msg);
                 }
             } catch (e) {
                 console.error(e);
@@ -578,10 +591,21 @@
             });
         }
 
-        function showResults(content) {
+        function showResults(content, chartPath = null) {
             currentReportContent = content;
             resultTopicDisplay.innerText = currentQuery;
-            outputEl.innerHTML = marked.parse(content);
+            
+            let html = "";
+            if (chartPath) {
+                // Convert internal path to browser URL
+                const browserPath = chartPath.replace('/app/static', '/static');
+                html += `<div class="mb-8 p-4 bg-black/20 rounded-xl border border-white/5">
+                            <h3 class="text-sm font-bold mb-3 text-gray-300">Data Analysis</h3>
+                            <img src="${browserPath}" class="w-full rounded-lg shadow-lg" alt="Generated Chart">
+                         </div>`;
+            }
+            html += marked.parse(content);
+            outputEl.innerHTML = html;
         }
 
         function resetView() {
@@ -600,6 +624,9 @@
             document.getElementById('dl-content').value = currentReportContent;
             document.getElementById('dl-topic').value = currentQuery;
             document.getElementById('dl-format').value = format;
+            if(currentChartPath) {
+                document.getElementById('dl-chart-path').value = currentChartPath;
+            }
             dlForm.submit();
         };
     </script>

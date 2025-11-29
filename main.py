@@ -11,23 +11,29 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from celery.result import AsyncResult
 
-# Import modules
+# Import your modules
 from task import generate_report_task, celery_app
 import AI_engine 
 import chat_engine 
 import report_formats
-import database # Import DB
+import database 
 
 app = FastAPI(title="ScholarForge")
 
+# Session Middleware for Chat History
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("APP_SECRET_KEY", "super-secret-key"))
 
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount Static Files
+if not os.path.exists("static"):
+    os.makedirs("static")
+if not os.path.exists("static/charts"):
+    os.makedirs("static/charts")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-# --- DATABASE INIT ON STARTUP ---
+# --- DATABASE INIT ---
 @app.on_event("startup")
 def startup():
     database.init_db()
@@ -45,23 +51,31 @@ class ChatRequest(BaseModel):
 class HookRequest(BaseModel):
     content: str
 
-# --- ROUTES ---
+# --- VIEW ROUTES ---
 
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("report_generator.html", {"request": request})
 
-# NEW: History Endpoints
+@app.get("/chat")
+async def chat_page(request: Request):
+    """
+    THIS IS THE ROUTE THAT WAS MISSING.
+    It renders the AI Assistant page.
+    """
+    return templates.TemplateResponse('ai_assistant.html', {"request": request})
+
+# --- HISTORY API ROUTES ---
+
 @app.get("/api/history")
 def get_history():
     reports = database.get_all_reports()
-    # Convert DB objects to simple JSON list
     data = []
     for r in reports:
         data.append({
             "id": r.id, 
             "topic": r.topic, 
-            "date": r.created_at.strftime("%b %d, %H:%M") # Format: Nov 28, 14:30
+            "date": r.created_at.strftime("%b %d, %H:%M")
         })
     return data
 
@@ -72,21 +86,19 @@ def get_report(id: int):
         return {"topic": report.topic, "content": report.content}
     return {"error": "Not found"}
 
+# --- REPORT GENERATION ROUTES ---
+
 @app.post("/start-report")
 async def start_report(data: ReportRequest):
     try:
         if not data.query:
             return JSONResponse({'error': 'No query provided'}, status_code=400)
         
-        user_format = ""
+        user_format = data.format_key if data.format_key in report_formats.FORMAT_TEMPLATES else "literature_review"
         if data.format_key == "custom":
             if not data.format_content or data.format_content.strip() == "":
                 return JSONResponse({'error': 'Custom format selected but no content provided.'}, status_code=400)
             user_format = "custom" 
-        else:
-            if data.format_key not in report_formats.FORMAT_TEMPLATES:
-                return JSONResponse({'error': f'Invalid format key: {data.format_key}'}, status_code=400)
-            user_format = data.format_key
 
         task = generate_report_task.delay(data.query, user_format, data.page_count)
         return {"task_id": task.id}
@@ -113,7 +125,8 @@ async def report_status(task_id: str):
         return {
             'status': 'SUCCESS',
             'report_content': result.get('report_content'),
-            'search_content': result.get('search_content')
+            'search_content': result.get('search_content'),
+            'chart_path': result.get('chart_path')
         }
 
     elif task.state == 'FAILURE':
@@ -121,6 +134,8 @@ async def report_status(task_id: str):
         
     else:
         return {'status': task.state}
+
+# --- FILE OPERATIONS ---
 
 def cleanup_file(path: str):
     try:
@@ -134,16 +149,16 @@ async def download(
     background_tasks: BackgroundTasks, 
     report_content: str = Form(...),
     topic: str = Form(...),
-    format: str = Form(...)
+    format: str = Form(...),
+    chart_path: str = Form(None)
 ):
-    return send_converted_file(report_content, topic, format, background_tasks)
+    return send_converted_file(report_content, topic, format, chart_path, background_tasks)
 
 @app.get("/get-report-formats")
 async def get_report_formats():
     return report_formats.FORMAT_TEMPLATES
 
-# --- Helper for File Download ---
-def send_converted_file(report_content, topic, format_type, background_tasks):
+def send_converted_file(report_content, topic, format_type, chart_path, background_tasks):
     if not report_content or not topic:
         raise HTTPException(status_code=400, detail="Missing report data.")
 
@@ -157,22 +172,18 @@ def send_converted_file(report_content, topic, format_type, background_tasks):
 
     result = "Error"
     media_type = "text/plain"
-    filename = "report.txt"
+    filename = f"{safe_topic}_Report.{format_type}"
 
     if format_type == 'pdf':
-        filename = f"{safe_topic}_Report.pdf"
-        result = AI_engine.convert_to_pdf(report_content, topic, temp_filepath)
+        result = AI_engine.convert_to_pdf(report_content, topic, temp_filepath, chart_path)
         media_type = 'application/pdf'
     elif format_type == 'docx':
-        filename = f"{safe_topic}_Report.docx"
-        result = AI_engine.convert_to_docx(report_content, topic, temp_filepath)
+        result = AI_engine.convert_to_docx(report_content, topic, temp_filepath, chart_path)
         media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     elif format_type == 'txt':
-        filename = f"{safe_topic}_Report.txt"
         result = AI_engine.convert_to_txt(report_content, temp_filepath)
         media_type = 'text/plain'
     elif format_type == 'json':
-        filename = f"{safe_topic}_Report.json"
         result = AI_engine.convert_to_json(report_content, topic, temp_filepath)
         media_type = 'application/json'
     else:
@@ -190,11 +201,7 @@ def send_converted_file(report_content, topic, format_type, background_tasks):
         if os.path.exists(temp_filepath): os.remove(temp_filepath)
         raise HTTPException(status_code=500, detail=f"File generation failed: {result}")
 
-# --- CHAT ROUTES ---
-
-@app.get("/chat")
-async def chat_page(request: Request):
-    return templates.TemplateResponse('ai_assistant.html', {"request": request})
+# --- CHAT & HOOK LOGIC (RESTORED) ---
 
 @app.post("/chat")
 async def handle_chat(data: ChatRequest, request: Request):
@@ -206,6 +213,7 @@ async def handle_chat(data: ChatRequest, request: Request):
     chat_history.append({'role': 'assistant', 'content': ai_response})
     request.session['chat_history'] = chat_history
     
+    # Save to DB
     database.save_chat_message("user", data.message)
     database.save_chat_message("assistant", ai_response)
 

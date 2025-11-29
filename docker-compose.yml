@@ -1,42 +1,38 @@
 services:
-  # Service 1: The Database (Redis for Celery)
   redis:
     image: redis:alpine
     container_name: scholarforge_redis
     ports:
       - "6379:6379"
 
-  # Service 2: The FastAPI Backend
   web:
     build: .
     container_name: scholarforge_web
     command: uvicorn main:app --host 0.0.0.0 --port 5000 --reload
     volumes:
-      - .:/app  # Syncs code changes
-      - ./data:/app/data # SHARED DATA FOLDER
+      - .:/app
+      - ./data:/app/data
     ports:
       - "5000:5000"
+    env_file:
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - SERPAPI_KEY=${SERPAPI_KEY} 
-      - APP_SECRET_KEY=${APP_SECRET_KEY}
     depends_on:
       - redis
 
-  # Service 3: The Background Worker
   worker:
     build: .
     container_name: scholarforge_worker
     command: celery -A task.celery_app worker --loglevel=info
     volumes:
-      - .:/app  # Syncs code changes
-      - ./data:/app/data # SHARED DATA FOLDER
+      - .:/app
+      - ./data:/app/data
+    env_file:
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - SERPAPI_KEY=${SERPAPI_KEY}
     depends_on:
       - redis

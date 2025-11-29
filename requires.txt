@@ -13,3 +13,6 @@ python-dotenv
 httpx
 itsdangerous
 sqlalchemy
+matplotlib
+pandas
+pymupdf

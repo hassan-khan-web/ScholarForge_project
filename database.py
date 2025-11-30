@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.engine import Engine
 
 # 1. SETUP
 DB_FOLDER = "/app/data"
@@ -11,12 +12,20 @@ if not os.path.exists(DB_FOLDER):
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_FOLDER}/scholarforge.db"
 
+# Connect args needed for SQLite in threaded env
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
+# ENABLE WAL MODE (Crucial for Docker Concurrency)
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.close()
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# 2. MODELS (Tables)
-
+# 2. MODELS
 class ReportDB(Base):
     __tablename__ = "reports"
     id = Column(Integer, primary_key=True, index=True)
@@ -46,12 +55,11 @@ class Hook(Base):
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-# 3. INIT FUNCTION
+# 3. INIT
 def init_db():
     Base.metadata.create_all(bind=engine)
 
-# 4. HELPER FUNCTIONS (CRUD)
-
+# 4. CRUD
 def save_report(topic: str, content: str):
     db = SessionLocal()
     try:
@@ -64,19 +72,31 @@ def save_report(topic: str, content: str):
         db.close()
 
 def get_all_reports():
-    """Fetches list of reports (metadata only) for the history panel."""
     db = SessionLocal()
     try:
-        # We only need ID, Topic and Date for the list
         return db.query(ReportDB.id, ReportDB.topic, ReportDB.created_at).order_by(ReportDB.created_at.desc()).all()
     finally:
         db.close()
 
 def get_report_content(report_id: int):
-    """Fetches the full content of a specific report."""
     db = SessionLocal()
     try:
         return db.query(ReportDB).filter(ReportDB.id == report_id).first()
+    finally:
+        db.close()
+
+def delete_report(report_id: int):
+    db = SessionLocal()
+    try:
+        report = db.query(ReportDB).filter(ReportDB.id == report_id).first()
+        if report:
+            db.delete(report)
+            db.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"DB Delete Error: {e}")
+        return False
     finally:
         db.close()
 
@@ -88,8 +108,6 @@ def save_chat_message(role: str, content: str):
             session = ChatSession(title="General Chat")
             db.add(session)
             db.commit()
-            db.refresh(session)
-        
         msg = ChatMessage(session_id=1, role=role, content=content)
         db.add(msg)
         db.commit()

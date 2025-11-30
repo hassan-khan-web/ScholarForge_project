@@ -35,137 +35,164 @@
             transition: all 0.3s ease;
         }
 
-        /* --- LAYOUT & LAYERING --- */
-
-        /* 1. SIDEBAR (Top Layer) */
+        /* --- LAYOUT --- */
         #sidebar {
             background: rgba(26, 27, 38, 0.95) !important; 
             border-right: 1px solid rgba(122, 162, 247, 0.1);
-            z-index: 50; /* Always on top of history panel */
+            z-index: 50; 
+            transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        /* 2. HISTORY PANEL (Dynamic Positioning) */
         #history-panel {
             position: absolute;
             top: 0;
             bottom: 0;
-            left: 4rem; /* Starts exactly at the edge of the collapsed sidebar */
-            width: 20rem; 
+            left: 4rem; 
+            width: 22rem; 
             background: rgba(26, 27, 38, 0.98);
             border-right: 1px solid rgba(122, 162, 247, 0.1);
             backdrop-filter: blur(20px);
-            z-index: 40; /* Behind sidebar, above content */
-            transform: translateX(-100%); /* Hidden behind the sidebar */
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s ease; /* Animate slide AND left position */
+            z-index: 40; 
+            transform: translateX(-100%); 
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             display: flex;
             flex-direction: column;
         }
         
-        #history-panel.is-open {
-            transform: translateX(0); /* Slides out to sit beside sidebar */
-            box-shadow: 10px 0 30px -10px rgba(0, 0, 0, 0.5);
+        #history-panel.is-open { transform: translateX(0); box-shadow: 10px 0 30px -10px rgba(0, 0, 0, 0.5); }
+        body.sidebar-expanded #history-panel { left: 13rem; }
+        #main-content { z-index: 0; }
+
+        .app-logo {
+            font-weight: 700; font-size: 1.1rem;
+            background: linear-gradient(to right, #7aa2f7, #bb9af7);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            white-space: nowrap; opacity: 0; transform: translateX(-10px);
+            pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+            position: absolute; left: 20px;
         }
+        #sidebar.is-expanded .app-logo { opacity: 1; transform: translateX(0); pointer-events: auto; }
 
-        /* DYNAMIC POSITIONING: When Sidebar is Expanded, History moves right */
-        body.sidebar-expanded #history-panel {
-            left: 13rem; /* Width of expanded sidebar */
-        }
-
-        /* 3. MAIN CONTENT (Bottom Layer) */
-        #main-content {
-            z-index: 0;
-        }
-
-        /* --- COMPONENT STYLES --- */
-
-        /* Inputs */
-        #query, .custom-select { background: #16161e; border: 1px solid #292e42; color: #c0caf5; }
-        #query:focus, .custom-select:focus { border-color: #7aa2f7; box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.2); }
-
-        /* Result Bar */
-        #result-bar { background-color: rgba(26, 27, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); color: #c0caf5; }
-        .action-btn { background-color: rgba(122, 162, 247, 0.1); color: #7aa2f7; border: 1px solid rgba(122, 162, 247, 0.2); }
-        .action-btn:hover { background-color: rgba(122, 162, 247, 0.2); }
-
-        /* Report Text */
-        #report-output { color: #d1d5db; }
-        .prose h1, .prose h2 { color: #e5e7eb !important; }
-        .prose strong { color: #f3f4f6 !important; }
-        .prose code { background-color: #1f2937; color: #e5e7eb !important; }
-
-        /* History Items */
+        /* --- HISTORY ITEMS --- */
         .history-item {
-            padding: 14px;
-            margin: 0 12px 8px 12px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            cursor: pointer;
-            transition: all 0.2s;
+            position: relative; padding: 12px 14px; margin: 0 12px 8px 12px;
+            border-radius: 10px; background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05); cursor: pointer;
+            transition: all 0.2s; display: flex; align-items: center; gap: 10px;
         }
-        .history-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(122, 162, 247, 0.3);
-            transform: translateX(4px);
+        .history-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(122, 162, 247, 0.3); transform: translateX(2px); }
+        
+        /* Individual 3-Dot Button */
+        .item-options-btn {
+            opacity: 0; padding: 4px; border-radius: 6px; transition: all 0.2s; color: #94a3b8;
+            margin-left: auto; /* Push to right */
         }
+        .history-item:hover .item-options-btn { opacity: 1; }
+        .item-options-btn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+
+        /* Selection Circle */
+        .select-circle {
+            width: 18px; height: 18px; border: 2px solid #565f89; border-radius: 50%;
+            display: none; flex-shrink: 0; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .history-item.selected .select-circle { background: #7aa2f7; border-color: #7aa2f7; }
+        .history-item.selected .select-circle::after { content: '✓'; color: #1a1b26; font-size: 10px; font-weight: bold; }
+        
+        /* Mode Switching */
+        #history-list.selection-mode .select-circle { display: flex; }
+        #history-list.selection-mode .item-options-btn { display: none !important; } /* Hide individual dots in selection mode */
+
+        /* Dropdown Menus */
+        .popover-menu {
+            position: absolute; background: #1f2937; border: 1px solid #374151;
+            border-radius: 8px; padding: 4px; z-index: 100; min-width: 120px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); display: none;
+        }
+        .popover-menu.active { display: block; }
+        .menu-option {
+            padding: 8px 12px; font-size: 12px; color: #c0caf5; border-radius: 4px;
+            cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .menu-option:hover { background: rgba(255,255,255,0.1); }
+        .menu-option.danger { color: #ef4444; }
+        .menu-option.danger:hover { background: rgba(239, 68, 68, 0.1); }
 
         /* --- THEME OVERRIDES --- */
-        
-        /* LIGHT */
-        body.light-theme { background-color: #f3f4f6; background-image: none; color: #1f2937; }
-        .light-theme .glass-container, .light-theme #sidebar { background: #ffffff !important; border-color: #e5e7eb; }
-        .light-theme #history-panel { background: #ffffff; border-right: 1px solid #e5e7eb; }
+        body.light-theme { background-color: #f3f4f6; color: #1f2937; }
+        .light-theme .glass-container, .light-theme #sidebar, .light-theme #history-panel { background: #ffffff !important; border-color: #e5e7eb; }
+        .light-theme .app-logo { background: none; -webkit-text-fill-color: #2563eb; }
         .light-theme #query, .light-theme .custom-select { background: #ffffff; border: 1px solid #d1d5db; color: #1f2937; }
         .light-theme #result-bar { background-color: #ffffff; border: 1px solid #e5e7eb; color: #1f2937; }
         .light-theme .action-btn { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
-        .light-theme .action-btn:hover { background-color: #e5e7eb; color: #111827; }
         .light-theme .history-item { background: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; }
         .light-theme .history-item:hover { background: #f3f4f6; border-color: #2563eb; }
-        .light-theme #report-output { color: #374151; }
-        .light-theme .prose h1, .light-theme .prose h2 { color: #111827 !important; }
-        .light-theme .prose code { background-color: #f3f4f6; color: #111827 !important; }
-
-        /* DARK */
-        body.dark-theme { background-color: #000000; background-image: none; color: #e5e5e5; }
+        .light-theme .popover-menu { background: white; border-color: #e5e7eb; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .light-theme .menu-option { color: #334155; }
+        .light-theme .menu-option:hover { background: #f1f5f9; }
+        
+        body.dark-theme { background-color: #000000; color: #e5e5e5; }
         .dark-theme .glass-container, .dark-theme #sidebar { background: #000000 !important; border-color: #333; }
         .dark-theme #history-panel { background: #0a0a0a; border-right: 1px solid #333; }
-        .dark-theme #query, .dark-theme .custom-select { background: #171717; border: 1px solid #404040; color: #ffffff; }
-        .dark-theme #result-bar { background-color: #000000; border: 1px solid #333; color: #e5e5e5; }
-        .dark-theme .action-btn { background-color: #262626; color: #a3a3a3; border: 1px solid #404040; }
-        .dark-theme .action-btn:hover { background-color: #404040; color: #ffffff; }
-        .dark-theme .history-item { background: #171717; border: 1px solid #333; color: #e5e5e5; }
-        .dark-theme .history-item:hover { background: #262626; border-color: #525252; }
 
         /* UTILS */
-        .gradient-text { background: linear-gradient(to right, #7aa2f7, #bb9af7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-fill-color: transparent; }
-        .light-theme .gradient-text { background: none; -webkit-text-fill-color: #2563eb; text-fill-color: #2563eb; }
-        .dark-theme .gradient-text { background: linear-gradient(to right, #ffffff, #a3a3a3); -webkit-background-clip: text; text-fill-color: transparent; }
+        .gradient-text { background: linear-gradient(to right, #7aa2f7, #bb9af7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .light-theme .gradient-text { background: none; -webkit-text-fill-color: #2563eb; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(86, 95, 137, 0.5); border-radius: 20px; }
         .nav-text { opacity: 0; visibility: hidden; max-width: 0; white-space: nowrap; transition: all 0.3s ease; }
         #sidebar.is-expanded { width: 13rem; }
         #sidebar.is-expanded .nav-text { opacity: 1; visibility: visible; max-width: 200px; margin-left: 0.75rem; }
+        .settings-btn-wrapper { display: flex; justify-content: flex-start; padding-left: 0.5rem; }
+        #report-output { color: inherit; }
+        .prose h1, .prose h2, .prose strong { color: inherit !important; }
     </style>
 </head>
 <body class="min-h-screen flex">
     
     <aside id="history-panel">
-        <div class="p-5 flex justify-between items-center border-b border-white/5">
+        <div id="history-header-normal" class="p-5 flex justify-between items-center border-b border-white/5 h-16">
             <h3 class="font-bold text-lg" style="color: inherit;">Archives</h3>
-            <button onclick="toggleHistoryPanel()" class="text-gray-500 hover:text-current transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <button onclick="toggleGlobalMenu(event)" class="p-1.5 rounded-md hover:bg-white/10 transition-colors text-gray-400 hover:text-current">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                    </button>
+                    <div id="global-menu-dropdown" class="popover-menu" style="right: 0; top: 30px;">
+                        <div class="menu-option" onclick="enableSelectionMode()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            Select Items
+                        </div>
+                    </div>
+                </div>
+                <button onclick="toggleHistoryPanel()" class="text-gray-500 hover:text-current transition-colors ml-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
         </div>
-        <div id="history-list" class="flex-1 overflow-y-auto custom-scrollbar pt-3 pb-3">
-            <div class="text-center text-gray-500 text-xs py-4">Loading...</div>
+
+        <div id="history-header-select" class="hidden p-4 border-b border-white/5 bg-blue-500/10 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="cancelSelectionMode()" class="text-sm font-medium text-blue-400 hover:text-blue-300">Done</button>
+                <span id="selected-count" class="text-xs text-gray-400">0 selected</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleSelectAll()" class="text-xs font-medium text-gray-300 hover:text-white px-2 py-1 rounded hover:bg-white/10">All</button>
+                <button onclick="deleteSelected()" class="text-xs font-bold text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Delete
+                </button>
+            </div>
         </div>
+
+        <div id="history-list" class="flex-1 overflow-y-auto custom-scrollbar pt-2 pb-3 px-1">
+            </div>
     </aside>
 
     <nav id="sidebar" class="flex flex-col h-screen w-16 glass-container border-r-0 rounded-r-2xl transition-all duration-300 ease-in-out shrink-0">
-        
-        <div class="p-3 flex items-center justify-end h-16" id="logo-container">
-            <button id="menu-toggle-btn" class="p-2 rounded-xl transition-colors hover:bg-white/5 text-gray-400 hover:text-white shrink-0">
+        <div class="p-4 flex items-center justify-between h-16 relative" id="logo-container">
+            <span class="app-logo">ScholarForge</span>
+            <button id="menu-toggle-btn" class="p-2 rounded-xl transition-colors hover:bg-white/5 text-gray-400 hover:text-white shrink-0 ml-auto z-10">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
         </div>
@@ -175,14 +202,12 @@
                 <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 <span class="nav-text font-medium">Research</span>
             </a>
-            
             <button onclick="toggleHistoryPanel()" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 w-full justify-center">
                 <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <span class="nav-text font-medium">History</span>
             </button>
-
             <a href="{{ url_for('chat_page') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 01-2 2h14a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                 <span class="nav-text font-medium">Assistant</span>
             </a>
         </div>
@@ -195,7 +220,6 @@
     </nav>
     
     <div id="main-content" class="flex-1 h-screen flex flex-col overflow-hidden relative z-0">
-        
         <header class="absolute top-0 left-0 w-full p-6 z-40 pointer-events-none">
             <div class="pointer-events-auto inline-block">
                 <h1 class="font-bold text-2xl tracking-tight gradient-text">ScholarForge</h1>
@@ -204,7 +228,6 @@
 
         <div class="w-full h-full overflow-y-auto relative custom-scrollbar">
             <main class="max-w-5xl mx-auto px-4 py-10 min-h-full flex flex-col relative overflow-hidden">
-
                 <div id="input-section" class="flex-1 flex flex-col justify-center transition-all duration-700 ease-in-out transform translate-x-0 opacity-100">
                     <header class="text-center mb-8">
                         <h1 class="text-3xl md:text-4xl font-bold gradient-text mb-3 tracking-tight">AI Research Report Generator</h1>
@@ -247,26 +270,14 @@
                 </div>
 
                 <div id="progress-section" class="hidden absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-500">
-                    <div id="step-1" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
+                     <div id="step-1" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
                         <div class="w-14 h-14 rounded-full border-[3px] border-gray-700 border-t-blue-500 animate-spin mb-4 shadow-lg"></div>
                         <h2 class="text-2xl font-bold text-white mb-1">Analyzing Topic</h2>
                         <p class="text-blue-300 text-sm" id="step-1-text">Searching global databases...</p>
                     </div>
-                    <div id="step-2" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
-                        <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-purple-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div>
-                        <h2 class="text-2xl font-bold text-white mb-1">Planning Report</h2>
-                        <p class="text-purple-300 text-sm" id="step-2-text">Synthesizing & Structuring...</p>
-                    </div>
-                    <div id="step-3" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
-                        <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-green-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-green-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></div>
-                        <h2 class="text-2xl font-bold text-white mb-1">Drafting Content</h2>
-                        <p class="text-green-300 text-sm" id="step-3-text">Writing detailed sections...</p>
-                    </div>
-                    <div id="step-4" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
-                        <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-cyan-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-                        <h2 class="text-2xl font-bold text-white mb-1">Finalizing</h2>
-                        <p class="text-cyan-300 text-sm" id="step-4-text">Formatting document...</p>
-                    </div>
+                    <div id="step-2" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-purple-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div><h2 class="text-2xl font-bold text-white mb-1">Planning Report</h2><p class="text-purple-300 text-sm" id="step-2-text">Synthesizing & Structuring...</p></div>
+                    <div id="step-3" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-green-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-green-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></div><h2 class="text-2xl font-bold text-white mb-1">Drafting Content</h2><p class="text-green-300 text-sm" id="step-3-text">Writing detailed sections...</p></div>
+                    <div id="step-4" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-cyan-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><h2 class="text-2xl font-bold text-white mb-1">Finalizing</h2><p class="text-cyan-300 text-sm" id="step-4-text">Formatting document...</p></div>
                 </div>
 
                 <div id="results-container" class="hidden flex-col w-full transition-opacity duration-700">
@@ -325,118 +336,222 @@
     </div>
     
     <script>
+        // --- VARIABLES ---
         const sidebar = document.getElementById('sidebar');
         const menuBtn = document.getElementById('menu-toggle-btn');
         const historyPanel = document.getElementById('history-panel');
         const historyList = document.getElementById('history-list');
-        const outputEl = document.getElementById('report-output');
+        const globalMenu = document.getElementById('global-menu-dropdown');
+        
+        let isSelectionMode = false;
+        let selectedReports = new Set();
+        let currentQuery = "";
+        let currentReportContent = "";
         let currentChartPath = "";
+        let intervalId;
 
-        // SIDEBAR TOGGLE
+        // --- MENU LOGIC ---
         menuBtn.onclick = () => {
             sidebar.classList.toggle('is-expanded');
             document.body.classList.toggle('sidebar-expanded');
         };
 
-        // HISTORY LOGIC
         function toggleHistoryPanel() {
-            // NOTE: Removed logic that closed sidebar. Now it stays open.
             historyPanel.classList.toggle('is-open');
             fetchHistory();
         }
         
-        document.getElementById('main-content').onclick = () => {
-            if(historyPanel.classList.contains('is-open')) historyPanel.classList.remove('is-open');
+        function toggleGlobalMenu(e) {
+            e.stopPropagation();
+            globalMenu.classList.toggle('active');
         }
 
+        function toggleItemMenu(id, e) {
+            e.stopPropagation();
+            // Close others
+            document.querySelectorAll('.popover-menu').forEach(m => m.classList.remove('active'));
+            // Open specific
+            const menu = document.getElementById(`item-menu-${id}`);
+            if(menu) menu.classList.toggle('active');
+        }
+        
+        // Close menus on click away
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.popover-menu') && !e.target.closest('button')) {
+                document.querySelectorAll('.popover-menu').forEach(m => m.classList.remove('active'));
+            }
+        });
+
+        // --- SELECTION LOGIC (BULK) ---
+        function enableSelectionMode() {
+            isSelectionMode = true;
+            selectedReports.clear();
+            globalMenu.classList.remove('active');
+            
+            document.getElementById('history-header-normal').classList.add('hidden');
+            document.getElementById('history-header-select').classList.remove('hidden');
+            document.getElementById('history-header-select').classList.add('flex');
+            
+            document.getElementById('history-list').classList.add('selection-mode');
+            updateHistoryUI();
+        }
+
+        function cancelSelectionMode() {
+            isSelectionMode = false;
+            selectedReports.clear();
+            
+            document.getElementById('history-header-normal').classList.remove('hidden');
+            document.getElementById('history-header-select').classList.add('hidden');
+            document.getElementById('history-header-select').classList.remove('flex');
+            
+            document.getElementById('history-list').classList.remove('selection-mode');
+            updateHistoryUI();
+        }
+        
+        function toggleSelectAll() {
+            const items = document.querySelectorAll('.history-item');
+            if(selectedReports.size === items.length) selectedReports.clear();
+            else items.forEach(el => selectedReports.add(parseInt(el.dataset.id)));
+            updateHistoryUI();
+        }
+
+        function toggleItemSelection(id) {
+            if(selectedReports.has(id)) selectedReports.delete(id);
+            else selectedReports.add(id);
+            updateHistoryUI();
+        }
+        
+        function updateHistoryUI() {
+            const items = document.querySelectorAll('.history-item');
+            items.forEach(item => {
+                const id = parseInt(item.dataset.id);
+                const circle = item.querySelector('.select-circle');
+                const dots = item.querySelector('.item-options-btn');
+                
+                if(isSelectionMode) {
+                    circle.style.display = 'flex';
+                    dots.style.display = 'none';
+                    if(selectedReports.has(id)) item.classList.add('selected');
+                    else item.classList.remove('selected');
+                } else {
+                    circle.style.display = 'none';
+                    dots.style.display = 'block';
+                    item.classList.remove('selected');
+                }
+            });
+            document.getElementById('selected-count').innerText = `${selectedReports.size} selected`;
+        }
+
+        async function deleteSelected() {
+            if (selectedReports.size === 0) return;
+            if (!confirm(`Delete ${selectedReports.size} reports?`)) return;
+            for (let id of selectedReports) await fetch(`/api/report/${id}`, { method: 'DELETE' });
+            cancelSelectionMode();
+            fetchHistory();
+        }
+
+        // --- SINGLE DELETE ---
+        async function deleteReport(id) {
+            if(!confirm("Delete this report?")) return;
+            await fetch(`/api/report/${id}`, { method: 'DELETE' });
+            fetchHistory();
+        }
+
+        // --- DATA FETCHING ---
         async function fetchHistory() {
             try {
                 const res = await fetch("/api/history");
                 const data = await res.json();
-                historyList.innerHTML = "";
+                const list = document.getElementById('history-list');
+                list.innerHTML = "";
+                
                 if(data.length === 0) {
-                    historyList.innerHTML = '<div class="text-center text-gray-500 py-4 text-xs">No reports yet.</div>';
+                    list.innerHTML = '<div class="text-center text-gray-500 py-4 text-xs">No reports yet.</div>';
                     return;
                 }
+                
                 data.forEach(item => {
                     const div = document.createElement('div');
                     div.className = "history-item";
-                    div.onclick = () => loadHistoryItem(item.id);
+                    div.dataset.id = item.id;
+                    
+                    div.onclick = (e) => {
+                        // Prevent click if clicking dots or menu
+                        if(e.target.closest('.item-options-btn') || e.target.closest('.popover-menu')) return;
+                        
+                        if (isSelectionMode) toggleItemSelection(item.id);
+                        else loadHistoryItem(item.id);
+                    };
+
                     div.innerHTML = `
-                        <div class="text-xs font-bold text-current mb-1 line-clamp-1">${item.topic}</div>
-                        <div class="text-[10px] opacity-60">${item.date}</div>
+                        <div class="select-circle" style="display: none;"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-bold text-current mb-1 line-clamp-1">${item.topic}</div>
+                            <div class="text-[10px] opacity-60">${item.date}</div>
+                        </div>
+                        <button class="item-options-btn" onclick="toggleItemMenu(${item.id}, event)">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                        </button>
+                        <div id="item-menu-${item.id}" class="popover-menu" style="right: 10px; top: 40px;">
+                            <div class="menu-option danger" onclick="deleteReport(${item.id})">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                Delete
+                            </div>
+                        </div>
                     `;
-                    historyList.appendChild(div);
+                    list.appendChild(div);
                 });
+                
+                // If we were in selection mode, restore UI state
+                if(isSelectionMode) updateHistoryUI();
+                
             } catch(e) {
-                historyList.innerHTML = '<div class="text-center text-red-400 py-4 text-xs">Error.</div>';
+                document.getElementById('history-list').innerHTML = '<div class="text-center text-red-400 py-4 text-xs">Error.</div>';
             }
         }
 
         async function loadHistoryItem(id) {
             historyPanel.classList.remove('is-open');
-            inputSection.classList.add('hidden');
-            progressSection.classList.add('hidden');
-            resultsContainer.classList.remove('hidden');
-            resultsContainer.classList.remove('opacity-0');
-            
+            document.getElementById('input-section').classList.add('hidden');
+            document.getElementById('progress-section').classList.add('hidden');
+            document.getElementById('results-container').classList.remove('hidden');
+            setTimeout(() => document.getElementById('results-container').classList.remove('opacity-0'), 100);
             try {
                 const res = await fetch(`/api/report/${id}`);
                 const data = await res.json();
                 if(data.content) {
                     currentQuery = data.topic;
-                    showResults(data.content); // If history had charts saved, we'd load them here
+                    showResults(data.content); // No chart storage yet for history
                 }
-            } catch(e) {
-                alert("Failed to load report.");
-            }
+            } catch(e) {}
         }
 
-        // SETTINGS LOGIC
+        // --- STANDARD APP FUNCTIONS (Keep existing) ---
         const settingsOverlay = document.getElementById('settings-overlay');
         const settingsPanel = document.getElementById('settings-panel');
         const openSettingsBtn = document.getElementById('settings-open-btn');
         const closeSettingsBtn = document.getElementById('settings-close-btn');
+        function openSettings() { settingsOverlay.classList.remove('hidden'); settingsPanel.classList.remove('hidden'); setTimeout(() => { settingsPanel.classList.remove('scale-95', 'opacity-0'); settingsPanel.classList.add('scale-100', 'opacity-100'); }, 10); }
+        function closeSettings() { settingsPanel.classList.remove('scale-100', 'opacity-100'); settingsPanel.classList.add('scale-95', 'opacity-0'); setTimeout(() => { settingsOverlay.classList.add('hidden'); settingsPanel.classList.add('hidden'); }, 300); }
+        openSettingsBtn.onclick = openSettings; closeSettingsBtn.onclick = closeSettings; settingsOverlay.onclick = () => { closeSettings(); if(historyPanel.classList.contains('is-open')) toggleHistoryPanel(); };
 
-        function openSettings() {
-            settingsOverlay.classList.remove('hidden'); settingsPanel.classList.remove('hidden');
-            setTimeout(() => { settingsPanel.classList.remove('scale-95', 'opacity-0'); settingsPanel.classList.add('scale-100', 'opacity-100'); }, 10);
-        }
-        function closeSettings() {
-            settingsPanel.classList.remove('scale-100', 'opacity-100'); settingsPanel.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => { settingsOverlay.classList.add('hidden'); settingsPanel.classList.add('hidden'); }, 300);
-        }
-        openSettingsBtn.onclick = openSettings; closeSettingsBtn.onclick = closeSettings; settingsOverlay.onclick = closeSettings;
-
-        // THEME LOGIC
-        const themeBtns = {
-            light: document.getElementById('theme-light-btn'),
-            dark: document.getElementById('theme-dark-btn'),
-            default: document.getElementById('theme-default-btn')
-        };
-
+        const themeBtns = { light: document.getElementById('theme-light-btn'), dark: document.getElementById('theme-dark-btn'), default: document.getElementById('theme-default-btn') };
         function applyTheme(theme) {
             document.body.className = 'min-h-screen flex';
             if (theme === 'light') document.body.classList.add('light-theme');
             if (theme === 'dark') document.body.classList.add('dark-theme');
             localStorage.setItem('theme', theme);
-            
-            Object.values(themeBtns).forEach(btn => {
-                btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5';
-            });
-            
+            Object.values(themeBtns).forEach(btn => btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5');
             if(themeBtns[theme]) {
                 const btn = themeBtns[theme];
-                if(theme === 'default') { btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium bg-[#7aa2f7] text-[#1a1b26] shadow-lg shadow-blue-500/20'; } 
-                else { btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium bg-white text-black shadow-sm'; }
+                if(theme === 'default') btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium bg-[#7aa2f7] text-[#1a1b26] shadow-lg shadow-blue-500/20';
+                else btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium bg-white text-black shadow-sm';
             }
         }
-        themeBtns.light.onclick = () => applyTheme('light'); 
-        themeBtns.dark.onclick = () => applyTheme('dark'); 
-        themeBtns.default.onclick = () => applyTheme('default');
+        themeBtns.light.onclick = () => applyTheme('light'); themeBtns.dark.onclick = () => applyTheme('dark'); themeBtns.default.onclick = () => applyTheme('default');
         applyTheme(localStorage.getItem('theme') || 'default');
 
-        // APP LOGIC
+        // FORM LOGIC
         const inputSection = document.getElementById('input-section');
         const progressSection = document.getElementById('progress-section');
         const resultsContainer = document.getElementById('results-container');
@@ -446,189 +561,34 @@
         const pageSelect = document.getElementById('page-select');
         const customContainer = document.getElementById('custom-format-container');
         const customInput = document.getElementById('custom-format-input');
+        const outputEl = document.getElementById('report-output');
         const resultTopicDisplay = document.getElementById('result-topic-display');
-
-        let reportFormats = {};
-        let currentReportContent = "";
-        let currentQuery = "";
-        let intervalId;
-        let currentStepIndex = 0; 
-
-        async function fetchFormats() {
-            try {
-                const response = await fetch("{{ url_for('get_report_formats') }}");
-                if (response.ok) {
-                    reportFormats = await response.json();
-                    customInput.value = reportFormats['custom'] || "";
-                }
-            } catch (e) { console.error("Error fetching formats", e); }
-        }
+        
+        async function fetchFormats() { try { const response = await fetch("{{ url_for('get_report_formats') }}"); if (response.ok) { const reportFormats = await response.json(); customInput.value = reportFormats['custom'] || ""; } } catch (e) { } }
         fetchFormats();
-
-        formatSelect.onchange = () => {
-            if (formatSelect.value === 'custom') {
-                customContainer.classList.remove('hidden');
-                customInput.focus();
-            } else {
-                customContainer.classList.add('hidden');
-            }
-        };
+        formatSelect.onchange = () => { if (formatSelect.value === 'custom') { customContainer.classList.remove('hidden'); customInput.focus(); } else { customContainer.classList.add('hidden'); } };
 
         form.onsubmit = async (e) => {
-            e.preventDefault();
-            currentQuery = queryInput.value;
-            let formatKey = formatSelect.value;
-            let formatContent = reportFormats[formatKey];
-            if (formatKey === 'custom') { formatContent = customInput.value; }
-            let pageCount = parseInt(pageSelect.value);
-
+            e.preventDefault(); currentQuery = queryInput.value; let formatKey = formatSelect.value; let formatContent = customInput.value; let pageCount = parseInt(pageSelect.value);
             inputSection.classList.add('transform', '-translate-x-full', 'opacity-0');
-
-            setTimeout(() => {
-                inputSection.classList.add('hidden');
-                progressSection.classList.remove('hidden');
-                resetProgressVisuals();
-                updateProgressVisuals(1, "Starting research...");
-            }, 500); 
-
-            try {
-                const startRes = await fetch("{{ url_for('start_report') }}", {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        query: currentQuery, 
-                        format_key: formatKey, 
-                        format_content: formatContent, 
-                        page_count: pageCount 
-                    })
-                });
-                
-                if (!startRes.ok) {
-                    const errData = await startRes.json();
-                    throw new Error(errData.error || "Failed to start");
-                }
-                
-                const data = await startRes.json();
-                const taskId = data.task_id;
-                intervalId = setInterval(() => checkStatus(taskId), 3000); 
-            } catch (err) { 
-                alert(err.message); 
-                resetView();
-            }
+            setTimeout(() => { inputSection.classList.add('hidden'); progressSection.classList.remove('hidden'); resetProgressVisuals(); updateProgressVisuals(1, "Starting research..."); }, 500); 
+            try { const startRes = await fetch("{{ url_for('start_report') }}", { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ query: currentQuery, format_key: formatKey, format_content: formatContent, page_count: pageCount }) }); const data = await startRes.json(); intervalId = setInterval(() => checkStatus(data.task_id), 3000); } catch (err) { alert("Error starting task"); resetView(); }
         };
 
         async function checkStatus(taskId) {
-            try {
-                const res = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId));
-                const data = await res.json();
-
-                if (data.status === 'SUCCESS') {
-                    clearInterval(intervalId);
-                    updateProgressVisuals(4, "Done! Rendering report...");
-                    
-                    setTimeout(() => {
-                        progressSection.classList.add('hidden');
-                        resultsContainer.classList.remove('hidden');
-                        setTimeout(() => resultsContainer.classList.remove('opacity-0'), 100);
-                        
-                        // NEW: Handle Chart
-                        if (data.chart_path) {
-                            currentChartPath = data.chart_path;
-                            showResults(data.report_content, data.chart_path);
-                        } else {
-                            currentChartPath = "";
-                            showResults(data.report_content);
-                        }
-                        
-                        fetchHistory();
-                    }, 1000);
-
-                } else if (data.status === 'FAILURE') {
-                    clearInterval(intervalId);
-                    alert("Error: " + data.error);
-                    resetView();
-
-                } else {
-                    const msg = data.message || "";
-                    if (msg.includes("Step 1")) updateProgressVisuals(1, msg);
-                    else if (msg.includes("Step 2") || msg.includes("Step 3")) updateProgressVisuals(2, msg);
-                    else if (msg.includes("Step 4")) updateProgressVisuals(3, msg);
-                    else if (msg.includes("Step 5") || msg.includes("Step 6")) updateProgressVisuals(4, msg);
-                }
-            } catch (e) {
-                console.error(e);
-            }
+            try { const res = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId)); const data = await res.json();
+                if (data.status === 'SUCCESS') { clearInterval(intervalId); updateProgressVisuals(4, "Done!"); setTimeout(() => { progressSection.classList.add('hidden'); resultsContainer.classList.remove('hidden'); setTimeout(() => resultsContainer.classList.remove('opacity-0'), 100); if (data.chart_path) showResults(data.report_content, data.chart_path); else showResults(data.report_content); fetchHistory(); }, 1000); } else if (data.status === 'FAILURE') { clearInterval(intervalId); alert("Error: " + data.error); resetView(); } else { if(data.message) updateProgressVisuals(data.message.includes("Step 1")?1:data.message.includes("Step 2")?2:3, data.message); }
+            } catch(e) {}
         }
-
-        function updateProgressVisuals(activeStep, text) {
-            const textEl = document.getElementById(`step-${activeStep}-text`);
-            if(textEl && text) textEl.innerText = text;
-
-            if (activeStep === currentStepIndex && !text) return; 
-            currentStepIndex = activeStep;
-
-            [1, 2, 3, 4].forEach(step => {
-                const el = document.getElementById(`step-${step}`);
-                if (!el) return;
-                el.className = "progress-step absolute flex flex-col items-center transition-all duration-700 ease-in-out";
-
-                if (step < activeStep) {
-                    el.classList.add('opacity-0', '-translate-y-24', 'scale-90', 'blur-sm');
-                } else if (step === activeStep) {
-                    el.classList.add('opacity-100', 'translate-y-0', 'scale-110', 'z-10');
-                } else {
-                    el.classList.add('opacity-0', 'translate-y-24', 'scale-90');
-                }
-            });
-        }
-
-        function resetProgressVisuals() {
-            currentStepIndex = 0;
-            [1, 2, 3, 4].forEach(step => {
-                const el = document.getElementById(`step-${step}`);
-                el.className = "progress-step absolute flex flex-col items-center transition-all duration-700 ease-in-out opacity-0 translate-y-24 scale-90";
-                if(step===1) document.getElementById('step-1-text').innerText = "Searching global databases...";
-            });
-        }
-
+        function updateProgressVisuals(activeStep, text) { const textEl = document.getElementById(`step-${activeStep}-text`); if(textEl) textEl.innerText = text; }
+        function resetProgressVisuals() {}
         function showResults(content, chartPath = null) {
-            currentReportContent = content;
-            resultTopicDisplay.innerText = currentQuery;
-            
-            let html = "";
-            if (chartPath) {
-                // Convert internal path to browser URL
-                const browserPath = chartPath.replace('/app/static', '/static');
-                html += `<div class="mb-8 p-4 bg-black/20 rounded-xl border border-white/5">
-                            <h3 class="text-sm font-bold mb-3 text-gray-300">Data Analysis</h3>
-                            <img src="${browserPath}" class="w-full rounded-lg shadow-lg" alt="Generated Chart">
-                         </div>`;
-            }
-            html += marked.parse(content);
-            outputEl.innerHTML = html;
+            currentReportContent = content; resultTopicDisplay.innerText = currentQuery; let html = "";
+            if (chartPath) { const browserPath = chartPath.replace('/app/static', '/static'); html += `<div class="mb-8 p-4 bg-black/20 rounded-xl border border-white/5"><img src="${browserPath}" class="w-full rounded-lg shadow-lg"></div>`; }
+            html += marked.parse(content); outputEl.innerHTML = html;
         }
-
-        function resetView() {
-            resultsContainer.classList.add('hidden');
-            progressSection.classList.add('hidden');
-            inputSection.classList.remove('hidden');
-            setTimeout(() => {
-                inputSection.classList.remove('-translate-x-full', 'opacity-0');
-            }, 50);
-            queryInput.value = "";
-            resetProgressVisuals();
-        }
-
-        window.downloadFile = function(format) {
-            const dlForm = document.getElementById('download-form');
-            document.getElementById('dl-content').value = currentReportContent;
-            document.getElementById('dl-topic').value = currentQuery;
-            document.getElementById('dl-format').value = format;
-            if(currentChartPath) {
-                document.getElementById('dl-chart-path').value = currentChartPath;
-            }
-            dlForm.submit();
-        };
+        function resetView() { resultsContainer.classList.add('hidden'); progressSection.classList.add('hidden'); inputSection.classList.remove('hidden'); setTimeout(() => { inputSection.classList.remove('-translate-x-full', 'opacity-0'); }, 50); queryInput.value = ""; }
+        window.downloadFile = function(format) { const dlForm = document.getElementById('download-form'); document.getElementById('dl-content').value = currentReportContent; document.getElementById('dl-topic').value = currentQuery; document.getElementById('dl-format').value = format; if(currentChartPath) document.getElementById('dl-chart-path').value = currentChartPath; dlForm.submit(); };
     </script>
 </body>
 </html>

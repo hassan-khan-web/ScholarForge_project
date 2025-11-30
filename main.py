@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from celery.result import AsyncResult
 
-# Import your modules
+# Import modules
 from task import generate_report_task, celery_app
 import AI_engine 
 import chat_engine 
@@ -20,10 +20,8 @@ import database
 
 app = FastAPI(title="ScholarForge")
 
-# Session Middleware for Chat History
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("APP_SECRET_KEY", "super-secret-key"))
 
-# Mount Static Files
 if not os.path.exists("static"):
     os.makedirs("static")
 if not os.path.exists("static/charts"):
@@ -33,12 +31,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
-# --- DATABASE INIT ---
 @app.on_event("startup")
 def startup():
     database.init_db()
 
-# --- Pydantic Models ---
 class ReportRequest(BaseModel):
     query: str
     format_key: str
@@ -51,7 +47,7 @@ class ChatRequest(BaseModel):
 class HookRequest(BaseModel):
     content: str
 
-# --- VIEW ROUTES ---
+# --- ROUTES ---
 
 @app.get("/")
 async def index(request: Request):
@@ -59,13 +55,9 @@ async def index(request: Request):
 
 @app.get("/chat")
 async def chat_page(request: Request):
-    """
-    THIS IS THE ROUTE THAT WAS MISSING.
-    It renders the AI Assistant page.
-    """
     return templates.TemplateResponse('ai_assistant.html', {"request": request})
 
-# --- HISTORY API ROUTES ---
+# --- HISTORY API ---
 
 @app.get("/api/history")
 def get_history():
@@ -86,7 +78,14 @@ def get_report(id: int):
         return {"topic": report.topic, "content": report.content}
     return {"error": "Not found"}
 
-# --- REPORT GENERATION ROUTES ---
+@app.delete("/api/report/{id}")
+def delete_report_endpoint(id: int):
+    success = database.delete_report(id)
+    if success:
+        return {"status": "success", "message": "Report deleted"}
+    return JSONResponse(status_code=404, content={"error": "Report not found"})
+
+# --- REPORT GENERATION ---
 
 @app.post("/start-report")
 async def start_report(data: ReportRequest):
@@ -112,37 +111,30 @@ async def report_status(task_id: str):
 
     if task.state == 'PENDING':
         return {'status': 'PENDING', 'message': 'Task is in queue...'}
-    
     elif task.state == 'PROGRESS':
         message = task.info.get('message', 'Task is running...')
         return {'status': 'PROGRESS', 'message': message}
-
     elif task.state == 'SUCCESS':
         result = task.result
         if isinstance(result, dict) and result.get('status') == 'FAILURE':
             return {'status': 'FAILURE', 'error': result.get('error')}
-        
         return {
             'status': 'SUCCESS',
             'report_content': result.get('report_content'),
             'search_content': result.get('search_content'),
             'chart_path': result.get('chart_path')
         }
-
     elif task.state == 'FAILURE':
         return {'status': 'FAILURE', 'error': str(task.info)}
-        
     else:
         return {'status': task.state}
 
-# --- FILE OPERATIONS ---
+# --- FILE OPS ---
 
 def cleanup_file(path: str):
     try:
-        if os.path.exists(path):
-            os.remove(path)
-    except Exception as e:
-        print(f"Error cleaning up file {path}: {e}")
+        if os.path.exists(path): os.remove(path)
+    except Exception as e: print(f"Error cleaning up file {path}: {e}")
 
 @app.post("/download")
 async def download(
@@ -192,38 +184,27 @@ def send_converted_file(report_content, topic, format_type, chart_path, backgrou
 
     if result.startswith("Success"):
         background_tasks.add_task(cleanup_file, temp_filepath)
-        return FileResponse(
-            path=temp_filepath, 
-            filename=filename, 
-            media_type=media_type
-        )
+        return FileResponse(path=temp_filepath, filename=filename, media_type=media_type)
     else:
         if os.path.exists(temp_filepath): os.remove(temp_filepath)
         raise HTTPException(status_code=500, detail=f"File generation failed: {result}")
 
-# --- CHAT & HOOK LOGIC (RESTORED) ---
-
 @app.post("/chat")
 async def handle_chat(data: ChatRequest, request: Request):
     chat_history = request.session.get('chat_history', [])
-    
     ai_response = await chat_engine.get_chat_response_async(data.message, chat_history)
-    
     chat_history.append({'role': 'user', 'content': data.message})
     chat_history.append({'role': 'assistant', 'content': ai_response})
     request.session['chat_history'] = chat_history
-    
-    # Save to DB
     database.save_chat_message("user", data.message)
     database.save_chat_message("assistant", ai_response)
-
     return {'response': ai_response}
 
 @app.post("/add-hook")
 async def add_hook(data: HookRequest):
     try:
         database.save_hook(data.content)
-        return {'status': 'success', 'message': 'Hook saved to Database!'}
+        return {'status': 'success', 'message': 'Hook saved!'}
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
 

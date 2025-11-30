@@ -1,7 +1,8 @@
 import os
 import serpapi
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import httpx
 from bs4 import BeautifulSoup
 import json
@@ -11,7 +12,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from collections import Counter
 import fitz 
@@ -19,10 +21,7 @@ import fitz
 from report_formats import get_template_instructions
 
 # --- 2-LAYER MODEL CONFIGURATION ---
-# Layer 1: Primary (Grok)
 SMART_MODEL = "x-ai/grok-4.1-fast:free"
-
-# Layer 2: Backup (Llama 3.3 70B)
 BACKUP_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 SEARCH_RESULTS_COUNT = 10
@@ -50,17 +49,13 @@ def clean_section_output(text: str, section_title: str) -> str:
         return "\n".join(lines[1:]).strip()
     return text.strip()
 
-# --- 2-LAYER LLM CALLER ---
+# --- LLM CALLER ---
 def call_llm(target_model: str, system_prompt: str, user_prompt: str, temp: float = 0.4, attempt: int = 1) -> str:
-    """
-    Strict 2-Layer Logic: Grok -> Llama -> Fail
-    """
     current_model = target_model
     
-    # If attempt 2, force switch to backup
     if attempt == 2:
         current_model = BACKUP_MODEL
-        print(f"   >>> Primary model failed. Switching to BACKUP: {current_model}")
+        print(f"   >>> Grok failed. Switching to BACKUP: {current_model}")
     elif attempt > 2:
         return f"Error: Both AI models failed. Please try again later."
 
@@ -92,14 +87,12 @@ def call_llm(target_model: str, system_prompt: str, user_prompt: str, temp: floa
             
             if response.status_code != 200:
                 print(f"   [!] AI Error ({current_model}): {response.status_code}")
-                # Retry with attempt 2 (Backup)
                 return call_llm(target_model, system_prompt, user_prompt, temp, attempt + 1)
                 
             return clean_ai_output(response.json()['choices'][0]['message']['content'])
             
     except Exception as e:
         print(f"   [!] Exception ({current_model}): {e}")
-        # Retry with attempt 2 (Backup)
         return call_llm(target_model, system_prompt, user_prompt, temp, attempt + 1)
 
 # --- TASKS ---
@@ -139,7 +132,6 @@ def generate_chart_from_data(summary: str, topic: str) -> str:
             "Return JSON: {\"title\": \"...\", \"x_label\": \"...\", \"y_label\": \"...\", \"data\": [{\"label\": \"A\", \"value\": 10}]}"
         )
         
-        # Use Primary model
         content = call_llm(SMART_MODEL, "Return JSON only.", prompt, temp=0.1)
         match = re.search(r'\{.*\}', content.replace('\n', ' '), re.DOTALL)
         if not match: return None
@@ -178,8 +170,6 @@ def critique_and_refine(section_text: str, topic: str) -> str:
         "Integrate this new data naturally. Maintain Markdown."
     )
     return call_llm(SMART_MODEL, "You are a Senior Editor.", refine_prompt, temp=0.3)
-
-# --- WRITER TASKS ---
 
 def write_section(section_title: str, topic: str, summary: str, full_report_context: str, word_limit: int) -> str:
     base_prompt = f"Write a detailed report section '{section_title}' for a report on '{topic}'. Use research: {summary}. Length: {word_limit} words."
@@ -237,7 +227,6 @@ def get_search_results(query: str, max_results: int = SEARCH_RESULTS_COUNT) -> s
     except Exception as e: return f"Search Error: {e}"
 
 # --- MAIN ORCHESTRATOR ---
-
 def run_ai_engine_with_return(query: str, user_format: str, page_count: int = 15, task=None) -> tuple[str, str, str]: 
     def _update_status(message: str):
         print(message) 
@@ -262,7 +251,7 @@ def run_ai_engine_with_return(query: str, user_format: str, page_count: int = 15
     
     full_report = f"# {query.upper()}\n\n"
     for i, section in enumerate(outline):
-        _update_status(f"Step 5/6: Writing Section {i+1}/{len(outline)}...")
+        _update_status(f"Step 5/6: Researching & Writing {i+1}/{len(outline)}...")
         section_content = write_section(section, query, summary, full_report, words_per_section)
         full_report += f"\n\n## {section}\n{section_content}\n"
     
@@ -272,6 +261,7 @@ def run_ai_engine_with_return(query: str, user_format: str, page_count: int = 15
     return search_content, full_report, chart_path
 
 # --- CONVERTERS ---
+
 def convert_to_txt(content, path):
     with open(path, "w", encoding="utf-8") as f: f.write(content)
     return "Success"
@@ -281,31 +271,164 @@ def convert_to_json(content, topic, path):
     with open(path, "w", encoding="utf-8") as f: json.dump(data, f, indent=4)
     return "Success"
 
+def add_formatted_text(paragraph, text):
+    """Splits text by ** and applies Bold/Black styling."""
+    parts = re.split(r'(\*\*[^*]+\*\*)', text)
+    for part in parts:
+        if part.startswith('**') and part.endswith('**'):
+            clean_part = part[2:-2]
+            run = paragraph.add_run(clean_part)
+            run.bold = True
+            run.font.color.rgb = RGBColor(0, 0, 0) # Force Black
+        else:
+            paragraph.add_run(part)
+
+def _add_markdown_table_to_docx(doc, table_block):
+    lines = [l.strip() for l in table_block.strip().split('\n') if l.strip()]
+    if len(lines) < 3: return
+    
+    rows = []
+    for line in lines:
+        if '---' in line: continue 
+        clean_line = line.strip('|')
+        cells = [c.strip() for c in clean_line.split('|')]
+        # Clean asterisks from inside table cells
+        cells = [c.replace('**', '') for c in cells]
+        rows.append(cells)
+    if not rows: return
+
+    table = doc.add_table(rows=len(rows), cols=len(rows[0]))
+    table.style = 'Table Grid'
+    
+    for r_idx, row_data in enumerate(rows):
+        for c_idx, cell_data in enumerate(row_data):
+            if c_idx < len(table.columns):
+                cell = table.cell(r_idx, c_idx)
+                cell.text = cell_data
+                if r_idx == 0:
+                    for run in cell.paragraphs[0].runs:
+                        run.bold = True
+
 def convert_to_docx(content, topic, path, chart_path=None):
     doc = Document()
     doc.add_heading(topic, 0)
+    
     if chart_path and os.path.exists(chart_path):
-        try: doc.add_picture(chart_path, width=Inches(6))
+        try: 
+            doc.add_picture(chart_path, width=Inches(6))
+            doc.add_paragraph("Figure 1: Analysis", style='Caption')
+            doc.add_paragraph("") 
         except: pass
-    for line in content.split('\n'):
-        if line.startswith('## '): doc.add_heading(line.replace('## ', ''), level=2)
-        else: doc.add_paragraph(line)
+
+    lines = content.split('\n')
+    table_buffer = []
+    in_table = False
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Table Logic
+        if stripped.startswith('|') and '|' in stripped[1:]:
+            in_table = True
+            table_buffer.append(stripped)
+            continue
+        elif in_table:
+            _add_markdown_table_to_docx(doc, "\n".join(table_buffer))
+            table_buffer = []
+            in_table = False
+        
+        if not stripped: continue
+        
+        if stripped.startswith('## '):
+            doc.add_heading(stripped.replace('## ', ''), level=2)
+        elif stripped.startswith('# '):
+            doc.add_heading(stripped.replace('# ', ''), level=1)
+        elif stripped.startswith('### '):
+            doc.add_heading(stripped.replace('### ', ''), level=3)
+        elif stripped.startswith('#### '):
+             # FIX: Handle #### as Heading 4 (or 3 if style missing)
+            doc.add_heading(stripped.replace('#### ', ''), level=4)
+        elif stripped.startswith('* ') or stripped.startswith('- '):
+            p = doc.add_paragraph(style='List Bullet')
+            add_formatted_text(p, stripped[2:])
+        else:
+            p = doc.add_paragraph()
+            p.paragraph_format.space_after = Pt(6) 
+            add_formatted_text(p, stripped)
+
+    if in_table and table_buffer:
+         _add_markdown_table_to_docx(doc, "\n".join(table_buffer))
+
     doc.save(path)
     return "Success"
 
+def format_pdf_text(text):
+    text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    return re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+
 def convert_to_pdf(content, topic, path, chart_path=None):
-    doc = SimpleDocTemplate(path, pagesize=A4)
+    doc = SimpleDocTemplate(path, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
     styles = getSampleStyleSheet()
-    story = [Paragraph(topic, styles['Title']), Spacer(1, 12)]
+    story = []
+    
+    title = Paragraph(topic, styles['Title'])
+    story.append(title)
+    story.append(Spacer(1, 12))
+    
     if chart_path and os.path.exists(chart_path):
-        try: story.append(RLImage(chart_path, width=450, height=250)); story.append(Spacer(1, 12))
+        try: 
+            story.append(RLImage(chart_path, width=450, height=250))
+            story.append(Spacer(1, 12))
         except: pass
-    style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=11, leading=15, spaceAfter=10)
-    head_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, spaceBefore=10)
-    for line in content.split('\n'):
-        clean = line.strip().replace('#', '').replace('*', '&bull;')
-        if not clean: continue
-        if line.startswith('#'): story.append(Paragraph(clean, head_style))
-        else: story.append(Paragraph(clean, style))
+
+    normal_style = styles['Normal']
+    normal_style.spaceAfter = 6
+    
+    lines = content.split('\n')
+    table_buffer = []
+    in_table = False
+
+    for line in lines:
+        stripped = line.strip()
+        
+        if stripped.startswith('|') and '|' in stripped[1:]:
+            in_table = True
+            table_buffer.append(stripped)
+            continue
+        elif in_table:
+            data = []
+            for row in table_buffer:
+                if '---' in row: continue
+                cells = [c.strip() for c in row.strip('|').split('|')]
+                cells = [c.replace('**', '') for c in cells]
+                data.append(cells)
+            
+            if data:
+                t = Table(data)
+                t.setStyle(TableStyle([
+                    ('GRID', (0,0), (-1,-1), 1, colors.black),
+                    ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ]))
+                story.append(t)
+                story.append(Spacer(1, 12))
+            
+            table_buffer = []
+            in_table = False
+        
+        if not stripped: continue
+
+        clean_text = format_pdf_text(stripped)
+
+        if stripped.startswith('##'):
+            story.append(Paragraph(clean_text.replace('#', ''), styles['Heading2']))
+        elif stripped.startswith('####'):
+             # FIX: Handle Level 4 in PDF
+            story.append(Paragraph(clean_text.replace('####', ''), styles['Heading3'])) # Map to H3 or create H4
+        elif stripped.startswith('*') or stripped.startswith('-'):
+            story.append(Paragraph(f"• {clean_text[2:]}", normal_style))
+        else:
+            story.append(Paragraph(clean_text, normal_style))
+            
     doc.build(story)
     return "Success"

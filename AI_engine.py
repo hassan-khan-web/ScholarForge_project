@@ -2,7 +2,6 @@ import os
 import serpapi
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 import httpx
 from bs4 import BeautifulSoup
 import json
@@ -14,8 +13,7 @@ import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from collections import Counter
+from reportlab.lib.styles import getSampleStyleSheet
 import fitz 
 
 from report_formats import get_template_instructions
@@ -140,18 +138,27 @@ def generate_chart_from_data(summary: str, topic: str) -> str:
         if not chart_data or 'data' not in chart_data: return None
 
         df = pd.DataFrame(chart_data['data'])
-        plt.figure(figsize=(10, 6))
+        
+        # FIX: Use Object-Oriented Matplotlib interface for Thread Safety in Celery
+        fig, ax = plt.subplots(figsize=(10, 6))
         plt.style.use('ggplot')
-        plt.bar(df['label'], df['value'], color='#4f46e5', alpha=0.8)
-        plt.title(chart_data.get('title', 'Analysis'), fontsize=14, pad=20)
-        plt.xlabel(chart_data.get('x_label', ''), fontsize=12)
-        plt.ylabel(chart_data.get('y_label', ''), fontsize=12)
-        plt.xticks(rotation=45, ha='right')
-        plt.tight_layout()
-        plt.savefig(filepath, dpi=100)
-        plt.close()
+        
+        ax.bar(df['label'], df['value'], color='#4f46e5', alpha=0.8)
+        ax.set_title(chart_data.get('title', 'Analysis'), fontsize=14, pad=20)
+        ax.set_xlabel(chart_data.get('x_label', ''), fontsize=12)
+        ax.set_ylabel(chart_data.get('y_label', ''), fontsize=12)
+        
+        # Rotate x labels nicely
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+        
+        fig.tight_layout()
+        fig.savefig(filepath, dpi=100)
+        plt.close(fig) # Explicitly close figure to free memory
+        
         return filepath
-    except Exception: return None
+    except Exception as e:
+        print(f"Chart Gen Error: {e}")
+        return None
 
 def critique_and_refine(section_text: str, topic: str) -> str:
     critic_prompt = (
@@ -192,8 +199,11 @@ def _get_article_text(url: str) -> str:
         with httpx.Client(timeout=15.0, follow_redirects=True) as client:
             response = client.get(url, headers=headers)
         if response.status_code != 200: return ""
+        
+        # Check for PDF
         if "application/pdf" in response.headers.get("Content-Type", "") or url.endswith(".pdf"):
             try:
+                # fitz.open with stream requires "filetype" hint
                 with fitz.open(stream=response.content, filetype="pdf") as doc:
                     text = ""
                     for i, page in enumerate(doc):
@@ -201,6 +211,7 @@ def _get_article_text(url: str) -> str:
                         text += page.get_text()
                 return f"--- PDF SOURCE ---\n{text[:4000]}\n---"
             except: return ""
+            
         soup = BeautifulSoup(response.text, 'lxml')
         for tag in soup(['script', 'style', 'nav', 'footer']): tag.decompose()
         return soup.get_text(separator='\n', strip=True)[:4000]
@@ -346,7 +357,6 @@ def convert_to_docx(content, topic, path, chart_path=None):
         elif stripped.startswith('### '):
             doc.add_heading(stripped.replace('### ', ''), level=3)
         elif stripped.startswith('#### '):
-             # FIX: Handle #### as Heading 4 (or 3 if style missing)
             doc.add_heading(stripped.replace('#### ', ''), level=4)
         elif stripped.startswith('* ') or stripped.startswith('- '):
             p = doc.add_paragraph(style='List Bullet')
@@ -423,8 +433,7 @@ def convert_to_pdf(content, topic, path, chart_path=None):
         if stripped.startswith('##'):
             story.append(Paragraph(clean_text.replace('#', ''), styles['Heading2']))
         elif stripped.startswith('####'):
-             # FIX: Handle Level 4 in PDF
-            story.append(Paragraph(clean_text.replace('####', ''), styles['Heading3'])) # Map to H3 or create H4
+            story.append(Paragraph(clean_text.replace('####', ''), styles['Heading3'])) 
         elif stripped.startswith('*') or stripped.startswith('-'):
             story.append(Paragraph(f"• {clean_text[2:]}", normal_style))
         else:

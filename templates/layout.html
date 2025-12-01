@@ -1,300 +1,427 @@
 <!DOCTYPE html>
-<html lang="en" class=""> 
+<html lang="en"> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ScholarForge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        /* --- THEME ENGINE (Tokyo Night Default) --- */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a1b26;
-            background-image: radial-gradient(circle at 0% 0%, #2f334d 0%, transparent 40%), 
-                              radial-gradient(circle at 100% 100%, #16161e 0%, transparent 40%);
-            color: #a9b1d6;
-            transition: background 0.3s ease, color 0.3s ease;
-            height: 100vh; 
-            overflow: hidden; 
+        /* --- THEME VARIABLES --- */
+        :root {
+            --sidebar-width: 16rem;
+            --sidebar-collapsed-width: 4.5rem;
+            
+            /* Default (Tokyo Night) */
+            --bg-main: #1a1b26;
+            --bg-sidebar: #13141f;
+            --bg-panel: #1f2335;
+            --text-main: #a9b1d6;
+            --text-muted: #565f89;
+            --accent-primary: #7aa2f7;
+            --border-color: rgba(122, 162, 247, 0.1);
+            --hover-bg: rgba(122, 162, 247, 0.05);
+            --active-bg: rgba(122, 162, 247, 0.1);
         }
 
-        h1, h2, h3, .sidebar-title { color: #c0caf5; letter-spacing: -0.02em; }
-
-        /* Glass Effect */
-        .glass-container {
-            background: rgba(36, 40, 59, 0.8); 
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(122, 162, 247, 0.1); 
-            box-shadow: 0 10px 30px -10px rgba(2, 2, 10, 0.5);
-            transition: all 0.3s ease;
-        }
-
-        /* Sidebar & Borders */
-        #sidebar {
-            background: rgba(26, 27, 38, 0.95) !important; 
-            border-right: 1px solid rgba(122, 162, 247, 0.1);
-        }
-        .sidebar-footer { border-top: 1px solid rgba(122, 162, 247, 0.1); }
-        
-        #sidebar button, #sidebar a { color: #565f89; }
-        #sidebar button:hover, #sidebar a:hover { color: #c0caf5; background: rgba(122, 162, 247, 0.1); }
-
-        /* Panels & Settings */
-        .panel-header { border-bottom: 1px solid rgba(122, 162, 247, 0.1); }
-        .settings-text-main { color: #c0caf5; }
-        .settings-text-sub { color: #565f89; }
-
-        /* Inputs */
-        #query, #chat-input {
-            background: #16161e; border: 1px solid #292e42; color: #c0caf5; font-family: 'Inter', sans-serif;
-        }
-        #query:focus, #chat-input:focus {
-            border-color: #7aa2f7; box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.2);
-        }
-        .gradient-text {
-            background: linear-gradient(to right, #7aa2f7, #bb9af7); 
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text; text-fill-color: transparent;
-        }
-
-        /* --- LIGHT THEME OVERRIDES --- */
+        /* Light Theme Override */
         body.light-theme {
-            background-color: #f3f4f6; background-image: none; color: #1f2937; 
-        }
-        .light-theme .glass-container {
-            background: rgba(255, 255, 255, 0.95); border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        .light-theme #sidebar {
-            background: #ffffff !important; border-right: 1px solid #e5e7eb;
-        }
-        .light-theme .sidebar-footer { border-top: 1px solid #e5e7eb; }
-        .light-theme #sidebar button, .light-theme #sidebar a { color: #64748b; }
-        .light-theme #sidebar button:hover, .light-theme #sidebar a:hover { color: #1f2937; background: #f1f5f9; }
-        .light-theme .panel-header { border-bottom: 1px solid #e5e7eb; }
-        .light-theme .settings-text-main { color: #111827; }
-        .light-theme .settings-text-sub { color: #4b5563; }
-        .light-theme #query, .light-theme #chat-input {
-            background: #ffffff; border: 1px solid #d1d5db; color: #1f2937;
-        }
-        .light-theme #query:focus, .light-theme #chat-input:focus {
-            border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-        }
-        .light-theme h1, .light-theme h2, .light-theme h3 { color: #111827; }
-        .light-theme .gradient-text {
-            background: none; -webkit-text-fill-color: #2563eb; text-fill-color: #2563eb;
+            --bg-main: #f3f4f6;
+            --bg-sidebar: #ffffff;
+            --bg-panel: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --accent-primary: #2563eb;
+            --border-color: #e5e7eb;
+            --hover-bg: #f9fafb;
+            --active-bg: #eff6ff;
         }
 
-        /* --- DARK THEME OVERRIDES --- */
+        /* Dark Theme Override */
         body.dark-theme {
-            background-color: #000000; background-image: none; color: #e5e5e5;
+            --bg-main: #000000;
+            --bg-sidebar: #0a0a0a;
+            --bg-panel: #121212;
+            --text-main: #e5e5e5;
+            --text-muted: #a3a3a3;
+            --accent-primary: #3b82f6;
+            --border-color: #262626;
+            --hover-bg: #1f1f1f;
+            --active-bg: #262626;
         }
-        .dark-theme .glass-container {
-            background: rgba(18, 18, 18, 0.9); border: 1px solid #333; box-shadow: none;
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            overflow: hidden; 
+            transition: background-color 0.3s, color 0.3s;
         }
-        .dark-theme #sidebar {
-            background: #000000 !important; border-right: 1px solid #333;
+        
+        /* --- SIDEBAR --- */
+        #sidebar { 
+            width: var(--sidebar-width);
+            background: var(--bg-sidebar); 
+            border-right: 1px solid var(--border-color); 
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            z-index: 50;
+            display: flex; flex-direction: column; flex-shrink: 0;
         }
-        .dark-theme .sidebar-footer { border-top: 1px solid #333; }
-        .dark-theme #sidebar button, .dark-theme #sidebar a { color: #a3a3a3; }
-        .dark-theme #sidebar button:hover, .dark-theme #sidebar a:hover { color: #ffffff; background: #1a1a1a; }
-        .dark-theme .panel-header { border-bottom: 1px solid #333; }
-        .dark-theme .settings-text-main { color: #ffffff; }
-        .dark-theme .settings-text-sub { color: #a3a3a3; }
-        .dark-theme #query, .dark-theme #chat-input {
-            background: #171717; border: 1px solid #404040; color: #ffffff;
+        
+        /* Collapsed State Logic */
+        #sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+        
+        #sidebar.collapsed .nav-text, 
+        #sidebar.collapsed .logo-text, 
+        #sidebar.collapsed .sidebar-divider, 
+        #sidebar.collapsed .section-label,
+        #sidebar.collapsed #folder-tree-container,
+        #sidebar.collapsed .folder-arrow,
+        #sidebar.collapsed .create-folder-btn-text { 
+            display: none !important; opacity: 0; 
         }
-        .dark-theme #query:focus, .dark-theme #chat-input:focus {
-            border-color: #ffffff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        
+        /* Center icons when collapsed */
+        #sidebar.collapsed .nav-item { justify-content: center; padding: 12px 0; }
+        #sidebar.collapsed .nav-item svg { margin-right: 0; width: 22px; height: 22px; }
+        #sidebar.collapsed .sidebar-header { justify-content: center; }
+        #sidebar.collapsed .settings-container { justify-content: center; }
+
+        /* Navigation Links */
+        .nav-item {
+            display: flex; align-items: center; justify-content: flex-start;
+            padding: 10px 14px; margin-bottom: 4px; border-radius: 8px;
+            color: var(--text-muted); transition: all 0.2s; 
+            font-size: 0.85rem; font-weight: 500;
+            white-space: nowrap; overflow: hidden; cursor: pointer;
         }
-        .dark-theme h1, .dark-theme h2, .dark-theme h3 { color: #ffffff; }
-        .dark-theme .gradient-text {
-            background: linear-gradient(to right, #ffffff, #a3a3a3); -webkit-background-clip: text; text-fill-color: transparent;
+        .nav-item:hover { background: var(--hover-bg); color: var(--text-main); }
+        .nav-item.active { background: var(--active-bg); color: var(--accent-primary); }
+        .nav-item svg { min-width: 20px; width: 20px; height: 20px; margin-right: 12px; transition: margin 0.3s; }
+        
+        /* --- HISTORY PANEL (SLIDE OUT) --- */
+        #history-panel {
+            position: fixed;
+            top: 0; bottom: 0;
+            left: var(--sidebar-width);
+            width: 20rem;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 40; 
+            display: flex; flex-direction: column;
+            box-shadow: 10px 0 25px -5px rgba(0,0,0,0.1);
         }
+        #history-panel.open { transform: translateX(0); }
+        #sidebar.collapsed ~ #history-panel { left: var(--sidebar-collapsed-width); }
+
+        /* --- FOLDER TREE --- */
+        .folder-row { 
+            display: flex; align-items: center; padding: 8px 14px; cursor: pointer; 
+            color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+            transition: color 0.2s; border-radius: 6px;
+        }
+        .folder-row:hover { color: var(--text-main); background: var(--hover-bg); }
+        .folder-arrow { margin-right: 8px; width: 10px; display: inline-block; text-align: center; transition: transform 0.2s; }
+        .folder-row.open .folder-arrow { transform: rotate(90deg); }
+
+        .session-list { display: none; margin-left: 19px; border-left: 1px solid var(--border-color); }
+        .session-list.open { display: block; }
+
+        .session-item {
+            display: flex; align-items: center; padding: 6px 12px;
+            font-size: 0.8rem; color: var(--text-muted); cursor: pointer;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .session-item:hover { color: var(--accent-primary); background: var(--hover-bg); }
+        .session-item.active { color: var(--accent-primary); background: var(--active-bg); border-left: 2px solid var(--accent-primary); }
 
         /* --- UTILS --- */
-        .custom-select {
-            -webkit-appearance: none; appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237aa2f7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1em 1em; padding-right: 2.5rem;
+        .sidebar-divider { height: 1px; background: var(--border-color); margin: 16px 0; }
+        .glass-panel { background: var(--bg-panel); border: 1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        
+        .icon-btn {
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px;
+            color: var(--text-muted);
+            transition: all 0.2s;
         }
-        .light-theme .custom-select { background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f2937' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); }
+        .icon-btn:hover { background: var(--hover-bg); color: var(--text-main); }
 
-        /* Report Output */
-        #report-output h1 { font-size: 2.5rem; margin-top: 2rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(122, 162, 247, 0.2); color: #c0caf5; }
-        #report-output h2 { font-size: 1.875rem; font-weight: 600; margin-top: 1.75rem; margin-bottom: 1rem; }
-        #report-output h3 { font-size: 1.5rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; }
-        #report-output p { line-height: 1.8; margin-bottom: 1.5rem; font-size: 1.05rem; }
-        #report-output ul, #report-output ol { margin-left: 1.5rem; margin-bottom: 1.25rem; list-style-position: outside; }
-        #report-output pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(86, 95, 137, 0.5); border-radius: 20px; }
-
-        /* SIDEBAR EXPANSION ANIMATIONS */
-        .nav-text { opacity: 0; visibility: hidden; max-width: 0; white-space: nowrap; transition: all 0.3s ease; }
-        #sidebar.is-expanded { width: 13rem; }
-        #sidebar.is-expanded .nav-text { opacity: 1; visibility: visible; max-width: 200px; margin-left: 0.75rem; }
-
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
     </style>
 </head>
-<body class="min-h-screen flex">
-    
-    <nav id="sidebar" class="flex flex-col h-screen w-16 glass-container border-r-0 rounded-r-2xl z-50 transition-all duration-300 ease-in-out shrink-0">
-        
-        <div class="p-3 flex items-center justify-center h-16" id="logo-container">
-            <button id="menu-toggle-btn" class="p-2 rounded-xl transition-colors hover:bg-white/5 text-gray-400 hover:text-white shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+<body class="flex h-screen w-full">
+
+    <!-- SIDEBAR (Starts Collapsed) -->
+    <nav id="sidebar" class="collapsed">
+        <!-- Header -->
+        <div class="h-16 flex items-center justify-between px-4 border-b border-[var(--border-color)] shrink-0 sidebar-header">
+            <!-- Logo Text -->
+            <span class="logo-text font-bold text-xl tracking-tight transition-opacity duration-300" style="color: var(--accent-primary);">ScholarForge</span>
+            
+            <!-- Menu Icon (On Right Side) -->
+            <button id="sidebar-toggle" class="icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
         </div>
 
-        <div class="flex-grow flex flex-col gap-2 p-2 mt-4">
-            <a href="{{ url_for('index') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <span class="nav-text font-medium">Research</span>
+        <!-- Scrollable Menu -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar flex flex-col py-4 px-2">
+            
+            <!-- Main Nav -->
+            <a href="{{ url_for('index') }}" class="nav-item {% if request.path == '/' %}active{% endif %}" title="Report Generator">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <span class="nav-text">Report Generator</span>
             </a>
             
-            <a href="{{ url_for('chat_page') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                <span class="nav-text font-medium">Assistant</span>
+            <div onclick="toggleHistory()" class="nav-item" title="Generated History">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="nav-text">Generated History</span>
+            </div>
+
+            <a href="{{ url_for('chat_page') }}" class="nav-item {% if request.path == '/chat' %}active{% endif %}" title="Research Assistant">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 01-2 2h14a2 2 0 01-2 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                <span class="nav-text">Research Assistant</span>
             </a>
+
+            <!-- Divider -->
+            <div class="sidebar-divider"></div>
+
+            <!-- Folder Section -->
+            <div id="folder-section-wrapper" class="flex flex-col">
+                <button onclick="openFolderModal()" class="nav-item !text-[var(--accent-primary)] hover:!bg-[var(--hover-bg)] mb-2 group border border-dashed border-[var(--border-color)] justify-start" title="Create Folder">
+                    <svg class="group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    <span class="nav-text font-semibold create-folder-btn-text">Create Folder</span>
+                </button>
+
+                <div id="folder-tree-container" class="flex flex-col gap-0.5 mt-2 transition-opacity duration-300">
+                    <!-- JS Injected Folders go here -->
+                    <div class="text-xs text-[var(--text-muted)] pl-4 italic">Loading...</div>
+                </div>
+            </div>
         </div>
 
-        <div class="p-2 mt-auto sidebar-footer">
-            <button id="settings-open-btn" class="flex items-center justify-center w-full p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5">
-                <svg class="w-6 h-6 shrink-0 group-hover:rotate-90 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <span class="nav-text font-medium">Settings</span>
+        <!-- Bottom Settings (Icon Only) -->
+        <div class="mt-auto p-3 border-t border-[var(--border-color)] flex settings-container justify-center">
+            <button onclick="openSettingsModal()" class="icon-btn" title="Settings">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </button>
         </div>
     </nav>
-    
-    <div id="main-content" class="flex-1 h-screen flex flex-col overflow-hidden relative">
-        
-        <header class="absolute top-0 left-0 w-full p-6 z-40 pointer-events-none">
-            <div class="pointer-events-auto inline-block">
-                <h1 class="font-bold text-2xl tracking-tight gradient-text">
-                    ScholarForge
-                </h1>
-            </div>
-        </header>
 
+    <!-- GENERATED HISTORY PANEL (SLIDE OUT) -->
+    <aside id="history-panel">
+        <div class="h-16 flex items-center justify-between px-4 border-b border-[var(--border-color)]">
+            <span class="font-bold text-[var(--text-main)]">Generated Reports</span>
+            <button onclick="toggleHistory()" class="text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="history-list-content" class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <!-- Report History Injected Here -->
+            <div class="text-sm text-[var(--text-muted)] text-center mt-10">No generated reports yet.</div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex-1 flex flex-col relative overflow-hidden h-full z-0 bg-[var(--bg-main)]">
         {% block content %}{% endblock %}
     </div>
-    
-    <div id="settings-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden transition-opacity"></div>
-    <div id="settings-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md glass-container rounded-2xl p-6 z-[70] hidden shadow-2xl transform transition-all scale-95 opacity-0">
-        <div class="flex justify-between items-center mb-6 panel-header pb-4">
-            <h3 class="text-lg font-bold settings-text-main">Settings</h3>
-            <button id="settings-close-btn" class="text-gray-400 hover:text-white transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+
+    <!-- MODAL: CREATE FOLDER -->
+    <div id="folder-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="glass-panel rounded-xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-300" id="fm-content">
+            <h3 class="text-lg font-bold text-[var(--text-main)] mb-1">New Project Folder</h3>
+            <p class="text-xs text-[var(--text-muted)] mb-5">Group your research chats.</p>
+            <input type="text" id="fm-input" class="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg px-3 py-2.5 text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--accent-primary)] mb-6" placeholder="Folder Name">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeFolderModal()" class="px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-main)]">Cancel</button>
+                <button onclick="submitFolderCreation()" class="px-4 py-2 text-xs font-medium bg-[var(--accent-primary)] hover:opacity-90 text-white rounded-lg">Create</button>
+            </div>
         </div>
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <div class="flex flex-col">
-                    <span class="text-sm font-medium settings-text-main">Appearance</span>
-                    <span class="text-xs settings-text-sub">Customize interface theme</span>
-                </div>
-                <div class="flex gap-2 bg-black/40 dark:bg-black/20 light-theme:bg-gray-100 p-1 rounded-lg">
-                    <button id="theme-light-btn" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5">Light</button>
-                    <button id="theme-dark-btn" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5">Dark</button>
-                    <button id="theme-default-btn" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5">Tokyo</button>
+    </div>
+
+    <!-- MODAL: SETTINGS (THEME SELECTOR) -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="glass-panel rounded-xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-300" id="sm-content">
+            <div class="flex justify-between items-center mb-6 border-b border-[var(--border-color)] pb-3">
+                <h3 class="text-lg font-bold text-[var(--text-main)]">Settings</h3>
+                <button onclick="closeSettingsModal()" class="text-[var(--text-muted)] hover:text-[var(--text-main)]">✕</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-[var(--text-muted)] uppercase mb-2">Interface Theme</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setTheme('default')" class="theme-btn border border-[var(--border-color)] rounded-lg p-2 text-xs text-center hover:bg-[var(--hover-bg)] text-[var(--text-main)] transition-colors">
+                            Tokyo
+                        </button>
+                        <button onclick="setTheme('light')" class="theme-btn border border-[var(--border-color)] rounded-lg p-2 text-xs text-center hover:bg-[var(--hover-bg)] text-[var(--text-main)] transition-colors">
+                            Light
+                        </button>
+                        <button onclick="setTheme('dark')" class="theme-btn border border-[var(--border-color)] rounded-lg p-2 text-xs text-center hover:bg-[var(--hover-bg)] text-[var(--text-main)] transition-colors">
+                            Dark
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="download-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden"></div>
-    <div id="download-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm glass-container rounded-2xl p-6 z-[70] hidden transition-all duration-300">
-        <div class="flex justify-between items-center mb-6 panel-header pb-4">
-            <h3 class="text-lg font-semibold settings-text-main">Export Report</h3>
-            <button id="download-close-btn" class="text-gray-400 hover:text-white transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        </div>
-        <div class="space-y-3">
-            <form action="{{ url_for('download') }}" method="POST" class="block">
-                <input type="hidden" name="report_content" id="dl-content-pdf">
-                <input type="hidden" name="topic" id="dl-topic-pdf">
-                <input type="hidden" name="format" value="pdf">
-                <button type="submit" class="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-all border border-white/5 hover:border-white/10 group light-theme:bg-gray-100 light-theme:text-gray-800 light-theme:border-gray-200">
-                    <span class="font-medium text-sm">PDF Document</span>
-                    <svg class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors light-theme:group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                </button>
-            </form>
-            <form action="{{ url_for('download') }}" method="POST" class="block">
-                <input type="hidden" name="report_content" id="dl-content-docx">
-                <input type="hidden" name="topic" id="dl-topic-docx">
-                <input type="hidden" name="format" value="docx">
-                <button type="submit" class="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-all border border-white/5 hover:border-white/10 group light-theme:bg-gray-100 light-theme:text-gray-800 light-theme:border-gray-200">
-                    <span class="font-medium text-sm">Word Document</span>
-                    <svg class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors light-theme:group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                </button>
-            </form>
-            <form action="{{ url_for('download') }}" method="POST" class="block">
-                <input type="hidden" name="report_content" id="dl-content-txt">
-                <input type="hidden" name="topic" id="dl-topic-txt">
-                <input type="hidden" name="format" value="txt">
-                <button type="submit" class="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 transition-all border border-white/5 hover:border-white/10 group light-theme:bg-gray-100 light-theme:text-gray-800 light-theme:border-gray-200">
-                    <span class="font-medium text-sm">Plain Text</span>
-                    <svg class="w-4 h-4 text-gray-500 group-hover:text-white transition-colors light-theme:group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                </button>
-            </form>
-        </div>
-    </div>
-    
     <script>
-        // LOGIC
+        // --- UI TOGGLES ---
         const sidebar = document.getElementById('sidebar');
-        const menuBtn = document.getElementById('menu-toggle-btn');
-        menuBtn.onclick = () => sidebar.classList.toggle('is-expanded');
-
-        const settingsOverlay = document.getElementById('settings-overlay');
-        const settingsPanel = document.getElementById('settings-panel');
-        const openSettingsBtn = document.getElementById('settings-open-btn');
-        const closeSettingsBtn = document.getElementById('settings-close-btn');
-        const themeBtns = {
-            light: document.getElementById('theme-light-btn'),
-            dark: document.getElementById('theme-dark-btn'),
-            default: document.getElementById('theme-default-btn')
+        const historyPanel = document.getElementById('history-panel');
+        
+        document.getElementById('sidebar-toggle').onclick = () => {
+            sidebar.classList.toggle('collapsed');
         };
-        function openSettings() {
-            settingsOverlay.classList.remove('hidden'); settingsPanel.classList.remove('hidden');
-            setTimeout(() => { settingsPanel.classList.remove('scale-95', 'opacity-0'); settingsPanel.classList.add('scale-100', 'opacity-100'); }, 10);
-        }
-        function closeSettings() {
-            settingsPanel.classList.remove('scale-100', 'opacity-100'); settingsPanel.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => { settingsOverlay.classList.add('hidden'); settingsPanel.classList.add('hidden'); }, 300);
-        }
-        openSettingsBtn.onclick = openSettings; closeSettingsBtn.onclick = closeSettings; settingsOverlay.onclick = closeSettings;
 
-        function applyTheme(theme) {
-            document.body.className = 'min-h-screen flex';
-            if (theme === 'light') document.body.classList.add('light-theme');
-            if (theme === 'dark') document.body.classList.add('dark-theme');
-            localStorage.setItem('theme', theme);
-            Object.values(themeBtns).forEach(btn => {
-                btn.classList.remove('bg-white', 'text-black', 'shadow-sm', 'dark:bg-white', 'dark:text-black', 'bg-[#7aa2f7]', 'text-[#1a1b26]', 'light-theme:bg-white', 'light-theme:text-black'); 
-                btn.classList.add('text-gray-400', 'hover:bg-white/5'); 
-            });
-            if(themeBtns[theme]) {
-                const btn = themeBtns[theme];
-                btn.classList.remove('text-gray-400', 'hover:bg-white/5');
-                if(theme === 'default') { btn.classList.add('bg-[#7aa2f7]', 'text-[#1a1b26]', 'shadow-lg', 'shadow-blue-500/20'); } 
-                else { btn.classList.add('bg-white', 'text-black', 'shadow-sm'); }
+        window.toggleHistory = () => {
+            historyPanel.classList.toggle('open');
+            fetchHistoryReports(); 
+        };
+
+        // --- FOLDER LOGIC ---
+        const treeContainer = document.getElementById('folder-tree-container');
+        
+        async function fetchFolders() {
+            try {
+                const res = await fetch('/api/folders');
+                const folders = await res.json();
+                renderFolderTree(folders);
+            } catch(e) {}
+        }
+
+        function renderFolderTree(folders) {
+            treeContainer.innerHTML = '';
+            if(folders.length === 0) {
+                treeContainer.innerHTML = '<div class="text-xs text-[var(--text-muted)] pl-4 italic mt-1">No folders</div>';
+                return;
             }
-        }
-        themeBtns.light.onclick = () => applyTheme('light'); themeBtns.dark.onclick = () => applyTheme('dark'); themeBtns.default.onclick = () => applyTheme('default');
-        applyTheme(localStorage.getItem('theme') || 'default');
 
-        const downloadCloseBtn = document.getElementById('download-close-btn');
-        const downloadPanel = document.getElementById('download-panel');
-        const downloadOverlay = document.getElementById('download-overlay');
-        window.openDownloadPanel = function() { downloadPanel.classList.remove('hidden'); downloadOverlay.classList.remove('hidden'); }
-        function closeDownloadPanel() { downloadPanel.classList.add('hidden'); downloadOverlay.classList.add('hidden'); }
-        downloadCloseBtn.onclick = closeDownloadPanel; downloadOverlay.onclick = closeDownloadPanel;
+            folders.forEach(folder => {
+                const folderDiv = document.createElement('div');
+                
+                const header = document.createElement('div');
+                header.className = 'folder-row';
+                header.innerHTML = `<span class="folder-arrow">▶</span> <span class="truncate">${folder.name}</span>`;
+                
+                const list = document.createElement('div');
+                list.className = 'session-list';
+                
+                header.onclick = () => {
+                    header.classList.toggle('open');
+                    list.classList.toggle('open');
+                };
+
+                if(folder.sessions.length > 0) {
+                    folder.sessions.forEach(session => {
+                        const item = document.createElement('div');
+                        item.className = 'session-item';
+                        item.innerText = session.title;
+                        
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('session_id') == session.id) {
+                            item.classList.add('active');
+                            header.classList.add('open');
+                            list.classList.add('open');
+                        }
+
+                        item.onclick = (e) => {
+                            e.stopPropagation();
+                            if(window.location.pathname.includes('/chat')) {
+                                document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
+                                item.classList.add('active');
+                                const event = new CustomEvent('scholarforge:load-session', { detail: { folderId: folder.id, sessionId: session.id } });
+                                window.dispatchEvent(event);
+                            } else {
+                                window.location.href = '/chat?session_id=' + session.id;
+                            }
+                        };
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = '<div class="text-[10px] text-[var(--text-muted)] pl-4 py-1 italic">Empty</div>';
+                }
+
+                folderDiv.appendChild(header);
+                folderDiv.appendChild(list);
+                treeContainer.appendChild(folderDiv);
+            });
+        }
+
+        // --- HISTORY REPORTS LOGIC ---
+        async function fetchHistoryReports() {
+            try {
+                const res = await fetch("/api/history");
+                const data = await res.json();
+                const list = document.getElementById('history-list-content');
+                
+                if(data.length === 0) {
+                    list.innerHTML = '<div class="text-sm text-[var(--text-muted)] text-center mt-10">No generated reports yet.</div>';
+                    return;
+                }
+                
+                list.innerHTML = '';
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = "p-3 mb-2 rounded bg-[var(--hover-bg)] border border-[var(--border-color)] cursor-pointer hover:border-[var(--accent-primary)] transition-colors";
+                    div.innerHTML = `
+                        <div class="text-xs font-bold text-[var(--text-main)] mb-1 truncate">${item.topic}</div>
+                        <div class="text-[10px] text-[var(--text-muted)]">${item.date}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch(e) {}
+        }
+
+        // --- THEME LOGIC ---
+        function setTheme(theme) {
+            document.body.classList.remove('light-theme', 'dark-theme');
+            if(theme === 'light') document.body.classList.add('light-theme');
+            if(theme === 'dark') document.body.classList.add('dark-theme');
+            localStorage.setItem('scholarforge-theme', theme);
+            closeSettingsModal();
+        }
+        
+        const savedTheme = localStorage.getItem('scholarforge-theme') || 'default';
+        setTheme(savedTheme);
+
+        // --- MODALS ---
+        const fModal = document.getElementById('folder-modal');
+        const fContent = document.getElementById('fm-content');
+        const fInput = document.getElementById('fm-input');
+        window.openFolderModal = () => { fModal.classList.remove('hidden'); setTimeout(() => { fModal.classList.remove('opacity-0'); fContent.classList.remove('scale-95'); fContent.classList.add('scale-100'); fInput.focus(); }, 10); };
+        window.closeFolderModal = () => { fModal.classList.add('opacity-0'); fContent.classList.remove('scale-100'); fContent.classList.add('scale-95'); setTimeout(() => fModal.classList.add('hidden'), 300); fInput.value=''; };
+        window.submitFolderCreation = async () => {
+            if(!fInput.value.trim()) return;
+            try {
+                const res = await fetch('/api/folders', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: fInput.value }) });
+                const data = await res.json();
+                if(data.status === 'success') { 
+                    closeFolderModal(); 
+                    fetchFolders(); 
+                    const event = new CustomEvent('scholarforge:folder-created', { detail: { folderId: data.folder.id } });
+                    window.dispatchEvent(event);
+                }
+            } catch(e) {}
+        };
+
+        const sModal = document.getElementById('settings-modal');
+        const sContent = document.getElementById('sm-content');
+        window.openSettingsModal = () => { sModal.classList.remove('hidden'); setTimeout(() => { sModal.classList.remove('opacity-0'); sContent.classList.remove('scale-95'); sContent.classList.add('scale-100'); }, 10); };
+        window.closeSettingsModal = () => { sModal.classList.add('opacity-0'); sContent.classList.remove('scale-100'); sContent.classList.add('scale-95'); setTimeout(() => sModal.classList.add('hidden'), 300); };
+
+        document.addEventListener('DOMContentLoaded', fetchFolders);
     </script>
     {% block scripts %}{% endblock %}
 </body>

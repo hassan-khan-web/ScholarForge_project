@@ -35,6 +35,7 @@ templates = Jinja2Templates(directory="templates")
 def startup():
     database.init_db()
 
+# --- PYDANTIC MODELS ---
 class ReportRequest(BaseModel):
     query: str
     format_key: str
@@ -43,6 +44,14 @@ class ReportRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: int 
+
+class CreateFolderRequest(BaseModel):
+    name: str
+
+class CreateSessionRequest(BaseModel):
+    folder_id: int
+    title: str
 
 class HookRequest(BaseModel):
     content: str
@@ -57,7 +66,50 @@ async def index(request: Request):
 async def chat_page(request: Request):
     return templates.TemplateResponse('ai_assistant.html', {"request": request})
 
-# --- HISTORY API ---
+# --- FOLDER & CHAT API ---
+
+@app.get("/api/folders")
+def get_folders():
+    """Get the tree structure of Folders -> Sessions"""
+    return database.get_folders_with_sessions()
+
+@app.post("/api/folders")
+def create_new_folder(data: CreateFolderRequest):
+    try:
+        folder = database.create_folder(data.name)
+        return {"status": "success", "folder": {"id": folder.id, "name": folder.name, "sessions": []}}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Could not create folder. Name might be duplicate."})
+
+@app.post("/api/sessions")
+def create_new_session(data: CreateSessionRequest):
+    try:
+        session = database.create_chat_session(data.folder_id, data.title)
+        return {"status": "success", "session": {"id": session.id, "title": session.title}}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/api/sessions/{session_id}/messages")
+def get_session_history(session_id: int):
+    msgs = database.get_session_messages(session_id)
+    return [{"role": m.role, "content": m.content} for m in msgs]
+
+@app.post("/chat")
+async def handle_chat(data: ChatRequest):
+    # Fetch history for context
+    db_messages = database.get_session_messages(data.session_id)
+    history_context = [{"role": m.role, "content": m.content} for m in db_messages]
+    
+    # Get AI Response
+    ai_response = await chat_engine.get_chat_response_async(data.message, history_context)
+    
+    # Save to DB
+    database.save_chat_message(data.session_id, "user", data.message)
+    database.save_chat_message(data.session_id, "assistant", ai_response)
+    
+    return {'response': ai_response}
+
+# --- REPORT API ---
 
 @app.get("/api/history")
 def get_history():
@@ -84,8 +136,6 @@ def delete_report_endpoint(id: int):
     if success:
         return {"status": "success", "message": "Report deleted"}
     return JSONResponse(status_code=404, content={"error": "Report not found"})
-
-# --- REPORT GENERATION ---
 
 @app.post("/start-report")
 async def start_report(data: ReportRequest):
@@ -188,17 +238,6 @@ def send_converted_file(report_content, topic, format_type, chart_path, backgrou
     else:
         if os.path.exists(temp_filepath): os.remove(temp_filepath)
         raise HTTPException(status_code=500, detail=f"File generation failed: {result}")
-
-@app.post("/chat")
-async def handle_chat(data: ChatRequest, request: Request):
-    chat_history = request.session.get('chat_history', [])
-    ai_response = await chat_engine.get_chat_response_async(data.message, chat_history)
-    chat_history.append({'role': 'user', 'content': data.message})
-    chat_history.append({'role': 'assistant', 'content': ai_response})
-    request.session['chat_history'] = chat_history
-    database.save_chat_message("user", data.message)
-    database.save_chat_message("assistant", ai_response)
-    return {'response': ai_response}
 
 @app.post("/add-hook")
 async def add_hook(data: HookRequest):

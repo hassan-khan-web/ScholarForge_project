@@ -1,341 +1,275 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-<!-- 
-  MAIN CONTAINER 
-  - Uses relative positioning for the floating elements.
--->
-<main class="w-full h-full relative overflow-hidden flex flex-col bg-transparent">
+<div class="flex-1 flex flex-col h-full relative w-full">
 
-    <!-- 
-      1. WELCOME CONTAINER 
-      - Compact, centered.
-    -->
-    <div id="welcome-container" class="absolute inset-0 z-0 flex flex-col justify-center items-center p-4 transition-opacity duration-500">
-        <!-- Moved up slightly to balance the input bar below -->
-        <header class="text-center transform -translate-y-12 max-w-lg">
-            <div class="inline-flex items-center justify-center p-3 mb-4 bg-gray-800/50 rounded-2xl shadow-lg border border-gray-700/50 backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+    <!-- STATE 1: NO CHAT SELECTED (Welcome Screen) -->
+    <div id="welcome-state" class="absolute inset-0 z-10 flex flex-col justify-center items-center bg-[var(--bg-main)] transition-opacity duration-300">
+        <div class="p-8 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-color)] text-center max-w-sm shadow-2xl">
+            <div class="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-[var(--accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 01-2 2h14a2 2 0 01-2 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
             </div>
-            <h1 class="text-2xl font-semibold text-white mb-2 tracking-tight">
-                How can I help?
-            </h1>
-            <p class="text-sm text-gray-400">
-                Analyze docs, summarize topics, or write reports.
-            </p>
-        </header>
-    </div>
-
-    <!-- 
-      2. CHAT HISTORY CONTAINER
-      - Tighter reading column (max-w-2xl)
-      - pb-24 ensures text clears the input bar at bottom
-    -->
-    <div id="chat-container" class="flex-1 w-full overflow-y-auto custom-scrollbar relative z-10 hidden opacity-0 transition-opacity duration-500">
-        <div id="chat-messages" class="w-full max-w-2xl mx-auto p-4 pb-24">
-            <!-- Chat turns appended here -->
-        </div>
-    </div>
-
-    <!-- Hook Button (Smaller) -->
-    <button id="hook-button" class="hidden absolute z-50 bg-gray-800 text-white text-[10px] font-medium px-2 py-1 rounded shadow-lg border border-gray-600 hover:bg-gray-700 transition-colors">
-        Hook
-    </button>
-
-    <!-- 
-      3. INPUT AREA CONTAINER
-      - Compact input bar
-      - Transition transforms it from Center to Bottom
-    -->
-    <div id="chat-input-wrapper" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[-1rem] w-full max-w-2xl px-4 z-40 transition-all duration-700 ease-in-out">
-        
-        <form id="chat-input-form" class="relative w-full shadow-xl">
-            <input type="text" id="chat-input" 
-                   class="w-full bg-gray-800/90 backdrop-blur-md border border-gray-700 text-gray-200 placeholder-gray-500 rounded-xl py-3 pl-4 pr-10 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm shadow-inner transition-all"
-                   placeholder="Message ScholarForge..." autocomplete="off" required>
-            
-            <button type="submit" id="chat-submit-btn" class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
-                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                </svg>
+            <h2 class="text-xl font-bold text-[var(--text-main)] mb-2">Research Assistant</h2>
+            <p class="text-sm text-[var(--text-muted)] mb-6">Please create a folder to store chat research history.</p>
+            <button onclick="window.openFolderModal()" class="w-full py-2.5 bg-[var(--accent-primary)] hover:opacity-90 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/20">
+                Create New Folder
             </button>
-        </form>
-        
-        <div class="text-center mt-2 transition-opacity duration-300" id="disclaimer-text">
-            <p class="text-[10px] text-gray-600">AI can make mistakes.</p>
         </div>
     </div>
 
-</main>
-{% endblock %}
+    <!-- STATE 2: ACTIVE CHAT INTERFACE -->
+    <div id="chat-interface" class="flex-1 flex flex-col h-full hidden opacity-0 transition-opacity duration-300">
+        
+        <!-- Header -->
+        <div class="h-14 border-b border-[var(--border-color)] flex items-center justify-between px-6 bg-[var(--bg-panel)]">
+            <div class="flex items-center gap-3">
+                <span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span>
+                <span id="active-session-title" class="text-[var(--text-main)] text-sm font-medium tracking-wide">Loading...</span>
+            </div>
+            <button onclick="attemptNewChat()" class="text-xs text-[var(--text-muted)] border border-[var(--border-color)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)] px-3 py-1.5 rounded-lg transition-colors">
+                + New Chat
+            </button>
+        </div>
 
+        <!-- Messages Area -->
+        <div id="chat-container" class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+            <!-- Messages injected here via JS -->
+        </div>
 
-{% block scripts %}
+        <!-- Input Area -->
+        <div class="p-6 bg-[var(--bg-main)] border-t border-[var(--border-color)]">
+            <div class="max-w-4xl mx-auto relative">
+                <form id="chat-form" class="relative group">
+                    <input type="text" id="chat-input" 
+                        class="w-full bg-[var(--bg-sidebar)] border border-[var(--border-color)] text-[var(--text-main)] placeholder-[var(--text-muted)] rounded-xl py-4 pl-5 pr-14 focus:outline-none focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-blue-500/20 text-sm shadow-inner transition-all"
+                        placeholder="Ask a follow-up question..." autocomplete="off">
+                    
+                    <button type="submit" id="send-btn" class="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-[var(--accent-primary)] hover:opacity-90 text-white rounded-lg transition-all shadow-md">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hook Button (Contextual) -->
+    <button id="hook-button" class="hidden absolute z-50 bg-[var(--bg-panel)] text-[var(--accent-primary)] text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-[var(--border-color)] hover:bg-[var(--accent-primary)] hover:text-white transition-all transform hover:scale-105">
+        Save Snippet
+    </button>
+</div>
+
 <script>
-    const chatForm = document.getElementById('chat-input-form');
+    let currentFolderId = null;
+    let currentSessionId = null;
+    let typingInterval = null;
+
+    const welcomeState = document.getElementById('welcome-state');
+    const chatInterface = document.getElementById('chat-interface');
+    const chatContainer = document.getElementById('chat-container');
+    const sessionTitle = document.getElementById('active-session-title');
     const chatInput = document.getElementById('chat-input');
-    const chatInputWrapper = document.getElementById('chat-input-wrapper');
-    const chatContainer = document.getElementById('chat-container'); 
-    const chatMessages = document.getElementById('chat-messages'); 
-    const chatSubmitBtn = document.getElementById('chat-submit-btn');
-    const welcomeContainer = document.getElementById('welcome-container');
-    
-    let isFirstMessage = true; 
-    let typingInterval; 
-
-    function transitionToChatMode() {
-        if (!isFirstMessage) return;
-        isFirstMessage = false;
-
-        // 1. Fade out Welcome
-        welcomeContainer.style.opacity = '0';
-        setTimeout(() => {
-            welcomeContainer.style.display = 'none';
-        }, 500);
-
-        // 2. Show Chat Container
-        chatContainer.classList.remove('hidden');
-        setTimeout(() => {
-            chatContainer.classList.remove('opacity-0');
-        }, 10);
-
-        // 3. Move Input Bar to Bottom
-        // Remove centering classes
-        chatInputWrapper.classList.remove('top-1/2', 'left-1/2', '-translate-x-1/2', '-translate-y-[-1rem]');
-        
-        // Add bottom positioning classes
-        chatInputWrapper.classList.add('bottom-0', 'left-1/2', '-translate-x-1/2', 'pb-4');
-    }
-
-    chatForm.onsubmit = async (e) => {
-        e.preventDefault();
-        const message = chatInput.value;
-        if (!message.trim()) return;
-
-        transitionToChatMode();
-
-        chatSubmitBtn.disabled = true;
-
-        // 1. Add User Turn
-        appendTurn('user', message);
-        chatInput.value = '';
-
-        // 2. Add Bot Placeholder
-        const botContentElement = appendTurn('bot', '');
-
-        try {
-            const response = await fetch("{{ url_for('handle_chat') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message })
-            });
-            
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Server error');
-            }
-
-            const data = await response.json();
-
-            if (data.error) {
-                typewriterEffect(botContentElement, `Error: ${data.error}`);
-            } else {
-                typewriterEffect(botContentElement, data.response);
-            }
-
-        } catch (err) {
-            typewriterEffect(botContentElement, `Network Error: ${err.message}`);
-        }
-    };
-
-    function appendTurn(role, text) {
-        const rowDiv = document.createElement('div');
-        // Compact spacing (mb-3 instead of mb-6)
-        rowDiv.classList.add('w-full', 'flex', 'mb-3', 'group'); // Added 'group' for hover effects
-
-        if (role === 'user') {
-            rowDiv.classList.add('justify-end'); 
-            
-            // --- ACTION BUTTONS (Edit / Copy) ---
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = "flex items-center gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200";
-
-            // Edit Button (Pencil)
-            const editBtn = document.createElement('button');
-            editBtn.className = "p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors";
-            editBtn.title = "Edit & Resend";
-            editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`;
-            editBtn.onclick = () => {
-                chatInput.value = text;
-                chatInput.focus();
-            };
-
-            // Copy Button (Clipboard)
-            const copyBtn = document.createElement('button');
-            copyBtn.className = "p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors";
-            copyBtn.title = "Copy Text";
-            const copyIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-            const checkIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 text-green-400"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-            
-            copyBtn.innerHTML = copyIconSvg;
-            copyBtn.onclick = () => {
-                navigator.clipboard.writeText(text);
-                copyBtn.innerHTML = checkIconSvg;
-                setTimeout(() => { copyBtn.innerHTML = copyIconSvg; }, 2000);
-            };
-
-            actionsDiv.appendChild(editBtn);
-            actionsDiv.appendChild(copyBtn);
-
-            const bubble = document.createElement('div');
-            // Compact bubble padding
-            bubble.className = "bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed shadow-sm";
-            bubble.textContent = text;
-            
-            // Order: Actions then Bubble (Flex justify-end aligns them Right->Left visually, but DOM order matters)
-            // justify-end pushes items to the right. 
-            // If we want [Actions] [Bubble] |edge|
-            // We append Actions first, then Bubble. 
-            rowDiv.appendChild(actionsDiv);
-            rowDiv.appendChild(bubble);
-            
-            chatMessages.appendChild(rowDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return null;
-
-        } else {
-            rowDiv.classList.add('justify-start', 'gap-3');
-            
-            const iconDiv = document.createElement('div');
-            // Smaller Icon (w-6 h-6)
-            iconDiv.className = "flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mt-0.5 shadow-sm";
-            iconDiv.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>`;
-
-            const contentDiv = document.createElement('div');
-            // Smaller text and padding
-            contentDiv.className = "text-gray-200 text-sm leading-relaxed pt-0.5 max-w-[90%] bot-markdown-content";
-            contentDiv.innerHTML = '<div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-pulse"></div>';
-
-            rowDiv.appendChild(iconDiv);
-            rowDiv.appendChild(contentDiv);
-            chatMessages.appendChild(rowDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            return contentDiv; 
-        }
-    }
-
-    function typewriterEffect(element, fullText) {
-        element.innerHTML = '';
-        const words = fullText.split(/(\s+)/);
-        let currentText = '';
-        let index = 0;
-        
-        if (typingInterval) clearInterval(typingInterval);
-
-        typingInterval = setInterval(() => {
-            if (index < words.length) {
-                currentText += words[index];
-                element.innerHTML = marked.parse(currentText);
-                styleBotContent(element);
-
-                // Auto-scroll logic refined for compact layout
-                const isAtBottom = (chatContainer.scrollHeight - chatContainer.scrollTop) <= (chatContainer.clientHeight + 120);
-                if(isAtBottom) {
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                }
-                
-                index++;
-            } else {
-                clearInterval(typingInterval);
-                chatSubmitBtn.disabled = false;
-            }
-        }, 15); // Slightly faster typing for compact feel
-    }
-
-    function styleBotContent(element) {
-        // Compact typography overrides
-        const codeBlocks = element.querySelectorAll('pre');
-        codeBlocks.forEach(block => block.className = 'bg-gray-900/50 p-2.5 rounded-lg my-1.5 overflow-x-auto border border-gray-700 text-[11px] custom-scrollbar');
-        
-        const inlineCodes = element.querySelectorAll('code');
-        inlineCodes.forEach(code => {
-            if(!code.parentElement.tagName.includes('PRE')) {
-                code.className = 'bg-gray-800 text-blue-300 px-1 py-0.5 rounded text-[11px] font-mono border border-gray-700';
-            }
-        });
-
-        const links = element.querySelectorAll('a');
-        links.forEach(link => {
-            link.className = 'text-blue-400 hover:text-blue-300 underline underline-offset-2';
-            link.target = "_blank";
-        });
-        
-        const uls = element.querySelectorAll('ul');
-        uls.forEach(ul => ul.className = 'list-disc pl-4 my-1.5 space-y-0.5 text-gray-300');
-        
-        const ols = element.querySelectorAll('ol');
-        ols.forEach(ol => ol.className = 'list-decimal pl-4 my-1.5 space-y-0.5 text-gray-300');
-        
-        const headings = element.querySelectorAll('h1, h2, h3');
-        headings.forEach(h => h.className = 'font-bold text-white mt-3 mb-1.5 block text-sm');
-        
-        const strongs = element.querySelectorAll('strong, b');
-        strongs.forEach(s => s.className = 'font-semibold text-white');
-        
-        const paragraphs = element.querySelectorAll('p');
-        paragraphs.forEach(p => p.className = 'mb-2 last:mb-0');
-    }
-
-    // Hook Logic (Small tweaks for visual consistency)
+    const sendBtn = document.getElementById('send-btn');
     const hookButton = document.getElementById('hook-button');
-    let selectedText = '';
 
-    document.addEventListener('mouseup', (event) => {
-        if (!event.target.closest('#chat-messages')) {
-            hookButton.classList.add('hidden');
+    // 1. Listen for Sidebar Session Clicks (Dispatched from layout.html)
+    window.addEventListener('scholarforge:load-session', (e) => {
+        loadSession(e.detail.folderId, e.detail.sessionId);
+    });
+
+    // 2. Listen for New Folder Creation (Auto-start chat)
+    window.addEventListener('scholarforge:folder-created', (e) => {
+        currentFolderId = e.detail.folderId;
+        // Auto-create first chat in new folder
+        createNewChatSession(currentFolderId, "Initial Research");
+    });
+
+    // 3. Init Check on Page Load
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sid = urlParams.get('session_id');
+        if(sid) {
+            fetchMessages(sid);
+            welcomeState.classList.add('hidden');
+            chatInterface.classList.remove('hidden');
+            setTimeout(() => chatInterface.classList.remove('opacity-0'), 10);
+        } else {
+            welcomeState.style.opacity = '1';
+        }
+    });
+
+    async function loadSession(folderId, sessionId) {
+        currentFolderId = folderId;
+        currentSessionId = sessionId;
+
+        // UI Switch
+        welcomeState.style.opacity = '0';
+        setTimeout(() => welcomeState.classList.add('hidden'), 300);
+        
+        chatInterface.classList.remove('hidden');
+        setTimeout(() => chatInterface.classList.remove('opacity-0'), 10);
+
+        await fetchMessages(sessionId);
+    }
+
+    async function fetchMessages(sessionId) {
+        currentSessionId = sessionId;
+        chatContainer.innerHTML = '<div class="flex justify-center mt-10"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div></div>';
+        
+        try {
+            const res = await fetch(`/api/sessions/${sessionId}/messages`);
+            const msgs = await res.json();
+            
+            chatContainer.innerHTML = '';
+            // Basic title setting. 
+            sessionTitle.innerText = "Research Session"; 
+
+            if(msgs.length === 0) {
+                chatContainer.innerHTML = '<div class="text-center text-xs text-[var(--text-muted)] mt-10">Start the conversation...</div>';
+            } else {
+                msgs.forEach(m => renderMessage(m.role === 'user' ? 'user' : 'bot', m.content));
+            }
+        } catch(e) {
+            chatContainer.innerHTML = '<div class="text-center text-red-400 text-xs mt-10">Error connecting to database.</div>';
+        }
+    }
+
+    // --- NEW CHAT LOGIC ---
+    window.attemptNewChat = function() {
+        if(!currentFolderId) {
+            alert("Please select a folder from the sidebar first.");
+            return;
+        }
+        
+        const msg = "If your research topic does not align with the subjects already covered in this folder, please create a new folder.\n\nDo you want to create a new chat in THIS folder?";
+        if(confirm(msg)) {
+            const title = `Chat ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            createNewChatSession(currentFolderId, title);
+        }
+    }
+
+    async function createNewChatSession(folderId, title) {
+        try {
+            const res = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ folder_id: folderId, title: title })
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                window.location.href = `/chat?session_id=${data.session.id}`; 
+            }
+        } catch(e) { alert("Error creating session"); }
+    }
+
+    // --- CHAT SUBMISSION ---
+    document.getElementById('chat-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if(!text) return;
+        
+        if(!currentSessionId) {
+            alert("Please create a folder to store chat research history");
             return;
         }
 
+        renderMessage('user', text);
+        chatInput.value = '';
+        sendBtn.disabled = true;
+
+        const botBubble = renderMessage('bot', ''); // loading indicator
+
+        try {
+            const res = await fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message: text, session_id: currentSessionId })
+            });
+            const data = await res.json();
+            
+            if(data.error) typewriter(botBubble, "Error: " + data.error);
+            else typewriter(botBubble, data.response);
+        } catch(e) { typewriter(botBubble, "Network Error."); }
+    };
+
+    function renderMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = `flex w-full ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+        
+        if(role === 'user') {
+            div.innerHTML = `<div class="bg-[var(--accent-primary)] text-white px-5 py-3 rounded-2xl rounded-tr-sm text-sm max-w-[80%] shadow-lg leading-relaxed">${text}</div>`;
+        } else {
+            div.innerHTML = `
+                <div class="flex gap-4 max-w-[85%]">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 mt-1">
+                        <svg class="w-5 h-5 text-[var(--accent-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <div class="text-[var(--text-main)] text-sm leading-7 pt-1 bot-content">
+                        ${text ? marked.parse(text) : '<div class="flex space-x-1 pt-2"><div class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div><div class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75"></div><div class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150"></div></div>'}
+                    </div>
+                </div>
+            `;
+            styleBotContent(div);
+        }
+        
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return role === 'bot' ? div.querySelector('.bot-content') : null;
+    }
+
+    function typewriter(element, text) {
+        element.innerHTML = marked.parse(text);
+        styleBotContent(element.parentElement.parentElement);
+        sendBtn.disabled = false;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function styleBotContent(container) {
+        container.querySelectorAll('a').forEach(a => a.className = 'text-blue-400 hover:text-blue-300 underline underline-offset-2');
+        container.querySelectorAll('ul').forEach(u => u.className = 'list-disc pl-4 my-2 text-[var(--text-main)]');
+        container.querySelectorAll('ol').forEach(o => o.className = 'list-decimal pl-4 my-2 text-[var(--text-main)]');
+        container.querySelectorAll('p').forEach(p => p.className = 'mb-3 last:mb-0');
+        container.querySelectorAll('pre').forEach(p => p.className = 'bg-[var(--bg-sidebar)] p-3 rounded-lg border border-[var(--border-color)] text-xs font-mono my-3 overflow-x-auto text-[var(--text-main)]');
+        container.querySelectorAll('h1, h2, h3').forEach(h => h.className = 'font-bold text-[var(--text-main)] mt-4 mb-2');
+    }
+
+    // --- HOOK FEATURE ---
+    let selectedText = '';
+    document.addEventListener('mouseup', (event) => {
+        if (!event.target.closest('#chat-container')) { hookButton.classList.add('hidden'); return; }
         const selection = window.getSelection();
         const text = selection.toString().trim();
-
         if (text.length > 0) {
             selectedText = text;
-            const mainRect = document.querySelector('main').getBoundingClientRect();
-            // Position slightly tighter to cursor
-            const top = event.clientY - mainRect.top - 30; 
-            const left = event.clientX - mainRect.left;
-
+            const containerRect = document.querySelector('.relative.w-full').getBoundingClientRect();
+            const top = event.clientY - containerRect.top - 40; 
+            const left = event.clientX - containerRect.left;
             hookButton.style.top = `${top}px`;
             hookButton.style.left = `${left}px`;
             hookButton.classList.remove('hidden');
-        } else {
-            hookButton.classList.add('hidden');
-        }
+        } else { hookButton.classList.add('hidden'); }
     });
 
     hookButton.onclick = async () => {
         try {
-            const response = await fetch("{{ url_for('add_hook') }}", { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const res = await fetch("{{ url_for('add_hook') }}", { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: selectedText })
             });
-            const data = await response.json();
+            const data = await res.json();
             if(data.status === 'success') {
-                const originalText = hookButton.textContent;
-                hookButton.textContent = 'Saved!';
-                hookButton.classList.add('bg-green-600', 'border-green-500');
+                const old = hookButton.innerText;
+                hookButton.innerText = 'Saved!';
+                hookButton.classList.replace('bg-[var(--bg-panel)]', 'bg-green-600');
+                hookButton.classList.replace('text-[var(--accent-primary)]', 'text-white');
                 setTimeout(() => {
                     hookButton.classList.add('hidden');
-                    hookButton.textContent = originalText;
-                    hookButton.classList.remove('bg-green-600', 'border-green-500');
+                    hookButton.innerText = old;
+                    hookButton.classList.replace('bg-green-600', 'bg-[var(--bg-panel)]');
+                    hookButton.classList.replace('text-white', 'text-[var(--accent-primary)]');
+                    window.getSelection().removeAllRanges();
                 }, 1000);
             }
-        } catch (err) { console.error(err); }
-        window.getSelection().removeAllRanges();
+        } catch (err) {}
     };
 </script>
 {% endblock %}

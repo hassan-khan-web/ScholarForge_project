@@ -1,594 +1,339 @@
-<!DOCTYPE html>
-<html lang="en" class=""> 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScholarForge</title>
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="w-full h-full overflow-y-auto custom-scrollbar relative">
     
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-    <style>
-        /* --- THEME ENGINE --- */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a1b26;
-            background-image: radial-gradient(circle at 0% 0%, #2f334d 0%, transparent 40%), 
-                              radial-gradient(circle at 100% 100%, #16161e 0%, transparent 40%);
-            color: #a9b1d6;
-            transition: background 0.3s ease, color 0.3s ease;
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
-        /* Glass Effect */
-        .glass-container {
-            background: rgba(36, 40, 59, 0.8); 
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(122, 162, 247, 0.1); 
-            box-shadow: 0 10px 30px -10px rgba(2, 2, 10, 0.5);
-            transition: all 0.3s ease;
-        }
-
-        /* --- LAYOUT --- */
-        #sidebar {
-            background: rgba(26, 27, 38, 0.95) !important; 
-            border-right: 1px solid rgba(122, 162, 247, 0.1);
-            z-index: 50; 
-            transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        #history-panel {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 4rem; 
-            width: 22rem; 
-            background: rgba(26, 27, 38, 0.98);
-            border-right: 1px solid rgba(122, 162, 247, 0.1);
-            backdrop-filter: blur(20px);
-            z-index: 40; 
-            transform: translateX(-100%); 
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex;
-            flex-direction: column;
-        }
+    <!-- 1. INPUT SECTION -->
+    <main id="input-section" class="max-w-4xl mx-auto px-6 py-12 min-h-full flex flex-col justify-center transition-all duration-500 ease-in-out">
         
-        #history-panel.is-open { transform: translateX(0); box-shadow: 10px 0 30px -10px rgba(0, 0, 0, 0.5); }
-        body.sidebar-expanded #history-panel { left: 13rem; }
-        #main-content { z-index: 0; }
-
-        .app-logo {
-            font-weight: 700; font-size: 1.1rem;
-            background: linear-gradient(to right, #7aa2f7, #bb9af7);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            white-space: nowrap; opacity: 0; transform: translateX(-10px);
-            pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
-            position: absolute; left: 20px;
-        }
-        #sidebar.is-expanded .app-logo { opacity: 1; transform: translateX(0); pointer-events: auto; }
-
-        /* --- HISTORY ITEMS --- */
-        .history-item {
-            position: relative; padding: 12px 14px; margin: 0 12px 8px 12px;
-            border-radius: 10px; background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05); cursor: pointer;
-            transition: all 0.2s; display: flex; align-items: center; gap: 10px;
-        }
-        .history-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(122, 162, 247, 0.3); transform: translateX(2px); }
-        
-        /* Individual 3-Dot Button */
-        .item-options-btn {
-            opacity: 0; padding: 4px; border-radius: 6px; transition: all 0.2s; color: #94a3b8;
-            margin-left: auto; /* Push to right */
-        }
-        .history-item:hover .item-options-btn { opacity: 1; }
-        .item-options-btn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-
-        /* Selection Circle */
-        .select-circle {
-            width: 18px; height: 18px; border: 2px solid #565f89; border-radius: 50%;
-            display: none; flex-shrink: 0; align-items: center; justify-content: center; transition: all 0.2s;
-        }
-        .history-item.selected .select-circle { background: #7aa2f7; border-color: #7aa2f7; }
-        .history-item.selected .select-circle::after { content: '✓'; color: #1a1b26; font-size: 10px; font-weight: bold; }
-        
-        /* Mode Switching */
-        #history-list.selection-mode .select-circle { display: flex; }
-        #history-list.selection-mode .item-options-btn { display: none !important; } /* Hide individual dots in selection mode */
-
-        /* Dropdown Menus */
-        .popover-menu {
-            position: absolute; background: #1f2937; border: 1px solid #374151;
-            border-radius: 8px; padding: 4px; z-index: 100; min-width: 120px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); display: none;
-        }
-        .popover-menu.active { display: block; }
-        .menu-option {
-            padding: 8px 12px; font-size: 12px; color: #c0caf5; border-radius: 4px;
-            cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 8px;
-        }
-        .menu-option:hover { background: rgba(255,255,255,0.1); }
-        .menu-option.danger { color: #ef4444; }
-        .menu-option.danger:hover { background: rgba(239, 68, 68, 0.1); }
-
-        /* --- THEME OVERRIDES --- */
-        body.light-theme { background-color: #f3f4f6; color: #1f2937; }
-        .light-theme .glass-container, .light-theme #sidebar, .light-theme #history-panel { background: #ffffff !important; border-color: #e5e7eb; }
-        .light-theme .app-logo { background: none; -webkit-text-fill-color: #2563eb; }
-        .light-theme #query, .light-theme .custom-select { background: #ffffff; border: 1px solid #d1d5db; color: #1f2937; }
-        .light-theme #result-bar { background-color: #ffffff; border: 1px solid #e5e7eb; color: #1f2937; }
-        .light-theme .action-btn { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
-        .light-theme .history-item { background: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; }
-        .light-theme .history-item:hover { background: #f3f4f6; border-color: #2563eb; }
-        .light-theme .popover-menu { background: white; border-color: #e5e7eb; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .light-theme .menu-option { color: #334155; }
-        .light-theme .menu-option:hover { background: #f1f5f9; }
-        
-        body.dark-theme { background-color: #000000; color: #e5e5e5; }
-        .dark-theme .glass-container, .dark-theme #sidebar { background: #000000 !important; border-color: #333; }
-        .dark-theme #history-panel { background: #0a0a0a; border-right: 1px solid #333; }
-
-        /* UTILS */
-        .gradient-text { background: linear-gradient(to right, #7aa2f7, #bb9af7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .light-theme .gradient-text { background: none; -webkit-text-fill-color: #2563eb; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(86, 95, 137, 0.5); border-radius: 20px; }
-        .nav-text { opacity: 0; visibility: hidden; max-width: 0; white-space: nowrap; transition: all 0.3s ease; }
-        #sidebar.is-expanded { width: 13rem; }
-        #sidebar.is-expanded .nav-text { opacity: 1; visibility: visible; max-width: 200px; margin-left: 0.75rem; }
-        .settings-btn-wrapper { display: flex; justify-content: flex-start; padding-left: 0.5rem; }
-        #report-output { color: inherit; }
-        .prose h1, .prose h2, .prose strong { color: inherit !important; }
-    </style>
-</head>
-<body class="min-h-screen flex">
-    
-    <aside id="history-panel">
-        <div id="history-header-normal" class="p-5 flex justify-between items-center border-b border-white/5 h-16">
-            <h3 class="font-bold text-lg" style="color: inherit;">Archives</h3>
-            <div class="flex items-center gap-2">
-                <div class="relative">
-                    <button onclick="toggleGlobalMenu(event)" class="p-1.5 rounded-md hover:bg-white/10 transition-colors text-gray-400 hover:text-current">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                    </button>
-                    <div id="global-menu-dropdown" class="popover-menu" style="right: 0; top: 30px;">
-                        <div class="menu-option" onclick="enableSelectionMode()">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                            Select Items
-                        </div>
-                    </div>
-                </div>
-                <button onclick="toggleHistoryPanel()" class="text-gray-500 hover:text-current transition-colors ml-1">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-        </div>
-
-        <div id="history-header-select" class="hidden p-4 border-b border-white/5 bg-blue-500/10 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <button onclick="cancelSelectionMode()" class="text-sm font-medium text-blue-400 hover:text-blue-300">Done</button>
-                <span id="selected-count" class="text-xs text-gray-400">0 selected</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="toggleSelectAll()" class="text-xs font-medium text-gray-300 hover:text-white px-2 py-1 rounded hover:bg-white/10">All</button>
-                <button onclick="deleteSelected()" class="text-xs font-bold text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Delete
-                </button>
-            </div>
-        </div>
-
-        <div id="history-list" class="flex-1 overflow-y-auto custom-scrollbar pt-2 pb-3 px-1">
-            </div>
-    </aside>
-
-    <nav id="sidebar" class="flex flex-col h-screen w-16 glass-container border-r-0 rounded-r-2xl transition-all duration-300 ease-in-out shrink-0">
-        <div class="p-4 flex items-center justify-between h-16 relative" id="logo-container">
-            <span class="app-logo">ScholarForge</span>
-            <button id="menu-toggle-btn" class="p-2 rounded-xl transition-colors hover:bg-white/5 text-gray-400 hover:text-white shrink-0 ml-auto z-10">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-            </button>
-        </div>
-
-        <div class="flex-grow flex flex-col gap-1 p-2 mt-4">
-            <a href="{{ url_for('index') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <span class="nav-text font-medium">Research</span>
-            </a>
-            <button onclick="toggleHistoryPanel()" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 w-full justify-center">
-                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span class="nav-text font-medium">History</span>
-            </button>
-            <a href="{{ url_for('chat_page') }}" class="flex items-center p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5 justify-center">
-                <svg class="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 01-2 2h14a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
-                <span class="nav-text font-medium">Assistant</span>
-            </a>
-        </div>
-
-        <div class="p-2 mt-auto sidebar-footer settings-btn-wrapper" style="border-top: 1px solid rgba(122, 162, 247, 0.1);">
-            <button id="settings-open-btn" class="p-2.5 rounded-xl transition-all group text-gray-400 hover:text-white hover:bg-white/5" title="Settings">
-                <svg class="w-6 h-6 shrink-0 group-hover:rotate-90 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
-        </div>
-    </nav>
-    
-    <div id="main-content" class="flex-1 h-screen flex flex-col overflow-hidden relative z-0">
-        <header class="absolute top-0 left-0 w-full p-6 z-40 pointer-events-none">
-            <div class="pointer-events-auto inline-block">
-                <h1 class="font-bold text-2xl tracking-tight gradient-text">ScholarForge</h1>
-            </div>
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold mb-3 tracking-tight text-white">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                    ScholarForge
+                </span>
+            </h1>
+            <p class="text-[#565f89] text-sm">Automated Deep Research & Report Generation</p>
         </header>
 
-        <div class="w-full h-full overflow-y-auto relative custom-scrollbar">
-            <main class="max-w-5xl mx-auto px-4 py-10 min-h-full flex flex-col relative overflow-hidden">
-                <div id="input-section" class="flex-1 flex flex-col justify-center transition-all duration-700 ease-in-out transform translate-x-0 opacity-100">
-                    <header class="text-center mb-8">
-                        <h1 class="text-3xl md:text-4xl font-bold gradient-text mb-3 tracking-tight">AI Research Report Generator</h1>
-                        <p class="text-gray-400 text-sm md:text-base max-w-lg mx-auto">Generate comprehensive, citation-backed reports in minutes.</p>
-                    </header>
-                    <form id="report-form" class="w-full max-w-2xl mx-auto bg-gray-800/60 backdrop-blur-xl border border-gray-700/50 p-6 md:p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
-                        <div class="mb-6">
-                            <label for="query" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">Research Topic</label>
-                            <input type="text" id="query" name="query" class="w-full rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder-gray-600" placeholder="e.g. Quantum Computing in Healthcare..." required>
-                        </div>
-                        <div class="mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div class="md:col-span-2">
-                                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">Structure</label>
-                                    <select id="format-select" class="w-full rounded-xl px-4 py-3 custom-select focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer transition-all">
-                                        <option value="literature_review">Literature Review</option>
-                                        <option value="case_study">Case Study</option>
-                                        <option value="business_white_paper">Business White Paper</option>
-                                        <option value="technical_manual">Technical Manual</option>
-                                        <option value="journalistic_article">News Article</option>
-                                        <option value="custom">Custom Structure...</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 ml-1">Length</label>
-                                    <select id="page-select" class="w-full rounded-xl px-4 py-3 custom-select focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer transition-all">
-                                        <option value="7">7 Pages</option>
-                                        <option value="10">10 Pages</option>
-                                        <option value="15" selected>15 Pages</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="custom-format-container" class="mb-6 hidden">
-                            <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2 ml-1">Define Your Structure</label>
-                            <textarea id="custom-format-input" rows="6" class="w-full bg-gray-900/80 border border-blue-500/30 text-gray-300 text-xs font-mono rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all custom-scrollbar" placeholder="# 1. Introduction..."></textarea>
-                        </div>
-                        <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-3.5 rounded-xl shadow-lg transform transition-all duration-200 active:scale-[0.98]">Start Research Agent</button>
-                    </form>
-                </div>
+        <form id="report-form" class="w-full bg-[#1f2335] border border-[rgba(122,162,247,0.1)] p-8 rounded-2xl shadow-2xl relative overflow-hidden group">
+            
+            <!-- Glow Effect -->
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-50"></div>
 
-                <div id="progress-section" class="hidden absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-500">
-                     <div id="step-1" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90">
-                        <div class="w-14 h-14 rounded-full border-[3px] border-gray-700 border-t-blue-500 animate-spin mb-4 shadow-lg"></div>
-                        <h2 class="text-2xl font-bold text-white mb-1">Analyzing Topic</h2>
-                        <p class="text-blue-300 text-sm" id="step-1-text">Searching global databases...</p>
-                    </div>
-                    <div id="step-2" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-purple-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></div><h2 class="text-2xl font-bold text-white mb-1">Planning Report</h2><p class="text-purple-300 text-sm" id="step-2-text">Synthesizing & Structuring...</p></div>
-                    <div id="step-3" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-green-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-green-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></div><h2 class="text-2xl font-bold text-white mb-1">Drafting Content</h2><p class="text-green-300 text-sm" id="step-3-text">Writing detailed sections...</p></div>
-                    <div id="step-4" class="progress-step absolute flex flex-col items-center transition-all duration-1000 ease-in-out opacity-0 translate-y-12 scale-90"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-cyan-500 flex items-center justify-center mb-4 shadow-lg"><svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><h2 class="text-2xl font-bold text-white mb-1">Finalizing</h2><p class="text-cyan-300 text-sm" id="step-4-text">Formatting document...</p></div>
-                </div>
+            <div class="mb-6">
+                <label for="query" class="block text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-2 ml-1">Research Topic</label>
+                <input type="text" id="query" name="query" 
+                       class="w-full bg-[#16161e] border border-[#2f354b] text-white rounded-xl px-4 py-3.5 focus:outline-none focus:border-blue-500 transition-all placeholder-gray-600" 
+                       placeholder="e.g. Impact of Quantum Computing on Cryptography" required>
+            </div>
 
-                <div id="results-container" class="hidden flex-col w-full transition-opacity duration-700">
-                    <div id="result-bar" class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 p-4 rounded-2xl sticky top-0 z-40 shadow-xl backdrop-blur-xl transition-colors duration-300">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-green-500/10 rounded-lg">
-                                <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            </div>
-                            <div>
-                                <h3 class="font-medium text-sm">Report Generated</h3>
-                                <p class="text-xs opacity-70" id="result-topic-display">Topic</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="downloadFile('pdf')" class="action-btn px-4 py-2 text-xs font-medium rounded-lg transition-colors">PDF</button>
-                            <button onclick="downloadFile('docx')" class="action-btn px-4 py-2 text-xs font-medium rounded-lg transition-colors">DOCX</button>
-                            <button onclick="downloadFile('txt')" class="action-btn px-4 py-2 text-xs font-medium rounded-lg transition-colors">TXT</button>
-                            <button onclick="downloadFile('json')" class="action-btn px-4 py-2 text-xs font-medium rounded-lg transition-colors">JSON</button>
-                            <button onclick="resetView()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors shadow-lg shadow-indigo-500/20 border border-transparent">New</button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] font-bold text-[#565f89] uppercase tracking-wider mb-2 ml-1">Report Structure</label>
+                    <div class="relative">
+                        <select id="format-select" class="w-full appearance-none bg-[#16161e] border border-[#2f354b] text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="literature_review">Literature Review</option>
+                            <option value="case_study">Case Study</option>
+                            <option value="business_white_paper">Business White Paper</option>
+                            <option value="technical_manual">Technical Manual</option>
+                            <option value="journalistic_article">News Article</option>
+                            <option value="custom">Custom Structure...</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </div>
                     </div>
-                    <article id="report-output" class="w-full p-8 md:p-12 rounded-lg shadow-2xl mx-auto min-h-[800px] prose prose-invert prose-sm md:prose-base max-w-none"></article>
                 </div>
-            </main>
-        </div>
-    </div>
-
-    <div id="settings-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden transition-opacity"></div>
-    <div id="settings-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md glass-container rounded-2xl p-6 z-[70] hidden shadow-2xl transform transition-all scale-95 opacity-0">
-        <div class="flex justify-between items-center mb-6 pb-4" style="border-bottom: 1px solid rgba(122, 162, 247, 0.1);">
-            <h3 class="text-lg font-bold" style="color: #c0caf5;">Settings</h3>
-            <button id="settings-close-btn" class="text-gray-400 hover:text-white transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        </div>
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <div class="flex flex-col">
-                    <span class="text-sm font-medium" style="color: #c0caf5;">Appearance</span>
-                    <span class="text-xs" style="color: #565f89;">Customize interface theme</span>
-                </div>
-                <div class="flex gap-2 bg-black/40 p-1 rounded-lg">
-                    <button id="theme-light-btn" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5">Light</button>
-                    <button id="theme-dark-btn" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5">Dark</button>
-                    <button id="theme-default-btn" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5">Tokyo</button>
+                <div>
+                    <label class="block text-[10px] font-bold text-[#565f89] uppercase tracking-wider mb-2 ml-1">Length</label>
+                    <div class="relative">
+                        <select id="page-select" class="w-full appearance-none bg-[#16161e] border border-[#2f354b] text-white rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="7">Short (7 Pages)</option>
+                            <option value="15" selected>Standard (15 Pages)</option>
+                            <option value="25">Deep Dive (25 Pages)</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Custom Format Area -->
+            <div id="custom-format-container" class="mb-6 hidden">
+                <label class="block text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-2 ml-1">Define Structure</label>
+                <textarea id="custom-format-input" rows="4" class="w-full bg-[#16161e] border border-[#2f354b] text-white text-xs font-mono rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 custom-scrollbar" placeholder="# 1. Introduction..."></textarea>
+            </div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-900/30 transform transition-all duration-200 active:scale-[0.98] flex justify-center items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Initiate Research Agent
+            </button>
+        </form>
+    </main>
+
+    <!-- 2. PROGRESS SECTION -->
+    <div id="progress-section" class="hidden absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-500 z-20 bg-[#1a1b26] overflow-hidden">
+        
+        <!-- Step 1 -->
+        <div id="step-1" class="progress-step absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform translate-y-12 opacity-0 scale-95">
+            <div class="w-14 h-14 rounded-full border-[3px] border-[#2f354b] border-t-blue-500 animate-spin mb-4 shadow-lg shadow-blue-500/20"></div>
+            <h2 class="text-2xl font-bold text-white mb-1">Analyzing Topic</h2>
+            <p class="text-blue-300 text-sm" id="step-1-text">Searching global databases...</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="step-2" class="progress-step absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform translate-y-12 opacity-0 scale-95">
+            <div class="w-14 h-14 rounded-full bg-[#1f2335] border-2 border-purple-500 flex items-center justify-center mb-4 shadow-lg shadow-purple-500/20">
+                <svg class="w-7 h-7 text-purple-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-1">Planning Report</h2>
+            <p class="text-purple-300 text-sm" id="step-2-text">Synthesizing & Structuring...</p>
+        </div>
+
+        <!-- Step 3 -->
+        <div id="step-3" class="progress-step absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform translate-y-12 opacity-0 scale-95">
+            <div class="w-14 h-14 rounded-full bg-[#1f2335] border-2 border-green-500 flex items-center justify-center mb-4 shadow-lg shadow-green-500/20">
+                <svg class="w-7 h-7 text-green-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-1">Drafting Content</h2>
+            <p class="text-green-300 text-sm" id="step-3-text">Writing detailed sections...</p>
+        </div>
+
+        <!-- Step 4 -->
+        <div id="step-4" class="progress-step absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform translate-y-12 opacity-0 scale-95">
+            <div class="w-14 h-14 rounded-full bg-[#1f2335] border-2 border-cyan-500 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/20">
+                <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-1">Finalizing</h2>
+            <p class="text-cyan-300 text-sm" id="step-4-text">Formatting document...</p>
         </div>
     </div>
 
-    <div class="hidden">
-        <form id="download-form" action="{{ url_for('download') }}" method="POST" target="_blank">
-            <input type="hidden" name="report_content" id="dl-content">
-            <input type="hidden" name="topic" id="dl-topic">
-            <input type="hidden" name="format" id="dl-format">
-            <input type="hidden" name="chart_path" id="dl-chart-path">
-        </form>
+    <!-- 3. RESULTS SECTION -->
+    <div id="results-container" class="hidden flex-col w-full min-h-full transition-opacity duration-700 bg-[#1a1b26]">
+        <div id="result-bar" class="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 sticky top-0 z-40 bg-[#13141f]/90 backdrop-blur-md border-b border-[rgba(122,162,247,0.1)]">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-green-500/10 rounded-lg">
+                    <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                    <h3 class="font-medium text-sm text-white">Report Generated</h3>
+                    <p class="text-xs text-[#565f89]" id="result-topic-display">Topic</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="downloadFile('pdf')" class="px-4 py-2 bg-[#1f2335] hover:bg-[#2f354b] text-gray-300 text-xs font-medium rounded-lg border border-white/5 transition-colors">PDF</button>
+                <button onclick="downloadFile('docx')" class="px-4 py-2 bg-[#1f2335] hover:bg-[#2f354b] text-gray-300 text-xs font-medium rounded-lg border border-white/5 transition-colors">DOCX</button>
+                <button onclick="downloadFile('txt')" class="px-4 py-2 bg-[#1f2335] hover:bg-[#2f354b] text-gray-300 text-xs font-medium rounded-lg border border-white/5 transition-colors">TXT</button>
+                <button onclick="downloadFile('json')" class="px-4 py-2 bg-[#1f2335] hover:bg-[#2f354b] text-gray-300 text-xs font-medium rounded-lg border border-white/5 transition-colors">JSON</button>
+                <button onclick="resetView()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors shadow-lg shadow-indigo-500/20">New Report</button>
+            </div>
+        </div>
+        
+        <div class="max-w-5xl mx-auto px-6 py-8 w-full">
+            <article id="report-output" class="prose prose-invert prose-sm md:prose-base max-w-none text-[#a9b1d6]">
+                <!-- Content injected here -->
+            </article>
+        </div>
     </div>
-    
-    <script>
-        // --- VARIABLES ---
-        const sidebar = document.getElementById('sidebar');
-        const menuBtn = document.getElementById('menu-toggle-btn');
-        const historyPanel = document.getElementById('history-panel');
-        const historyList = document.getElementById('history-list');
-        const globalMenu = document.getElementById('global-menu-dropdown');
+
+</div>
+
+<!-- HIDDEN DOWNLOAD FORM -->
+<div class="hidden">
+    <form id="download-form" action="{{ url_for('download') }}" method="POST" target="_blank">
+        <input type="hidden" name="report_content" id="dl-content">
+        <input type="hidden" name="topic" id="dl-topic">
+        <input type="hidden" name="format" id="dl-format">
+        <input type="hidden" name="chart_path" id="dl-chart-path">
+    </form>
+</div>
+
+<script>
+    // --- STATE ---
+    let currentQuery = "";
+    let currentReportContent = "";
+    let currentChartPath = "";
+    let intervalId;
+
+    // --- ELEMENTS ---
+    const inputSection = document.getElementById('input-section');
+    const progressSection = document.getElementById('progress-section');
+    const resultsContainer = document.getElementById('results-container');
+    const reportOutput = document.getElementById('report-output');
+    const resultTopicDisplay = document.getElementById('result-topic-display');
+    const formatSelect = document.getElementById('format-select');
+    const customContainer = document.getElementById('custom-format-container');
+    const customInput = document.getElementById('custom-format-input');
+    const queryInput = document.getElementById('query');
+    const pageSelect = document.getElementById('page-select');
+
+    // --- FORM LOGIC ---
+    formatSelect.onchange = () => {
+        if (formatSelect.value === 'custom') customContainer.classList.remove('hidden');
+        else customContainer.classList.add('hidden');
+    };
+
+    document.getElementById('report-form').onsubmit = async (e) => {
+        e.preventDefault();
         
-        let isSelectionMode = false;
-        let selectedReports = new Set();
-        let currentQuery = "";
-        let currentReportContent = "";
-        let currentChartPath = "";
-        let intervalId;
+        // 1. Gather Data
+        currentQuery = queryInput.value;
+        const formatKey = formatSelect.value;
+        const formatContent = customInput.value;
+        const pageCount = parseInt(pageSelect.value);
 
-        // --- MENU LOGIC ---
-        menuBtn.onclick = () => {
-            sidebar.classList.toggle('is-expanded');
-            document.body.classList.toggle('sidebar-expanded');
-        };
+        // 2. Switch UI to Progress
+        inputSection.classList.add('opacity-0', '-translate-x-full');
+        setTimeout(() => {
+            inputSection.classList.add('hidden');
+            progressSection.classList.remove('hidden');
+            updateProgressVisuals(1, "Starting research...");
+        }, 500);
 
-        function toggleHistoryPanel() {
-            historyPanel.classList.toggle('is-open');
-            fetchHistory();
-        }
-        
-        function toggleGlobalMenu(e) {
-            e.stopPropagation();
-            globalMenu.classList.toggle('active');
-        }
-
-        function toggleItemMenu(id, e) {
-            e.stopPropagation();
-            // Close others
-            document.querySelectorAll('.popover-menu').forEach(m => m.classList.remove('active'));
-            // Open specific
-            const menu = document.getElementById(`item-menu-${id}`);
-            if(menu) menu.classList.toggle('active');
-        }
-        
-        // Close menus on click away
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.popover-menu') && !e.target.closest('button')) {
-                document.querySelectorAll('.popover-menu').forEach(m => m.classList.remove('active'));
-            }
-        });
-
-        // --- SELECTION LOGIC (BULK) ---
-        function enableSelectionMode() {
-            isSelectionMode = true;
-            selectedReports.clear();
-            globalMenu.classList.remove('active');
-            
-            document.getElementById('history-header-normal').classList.add('hidden');
-            document.getElementById('history-header-select').classList.remove('hidden');
-            document.getElementById('history-header-select').classList.add('flex');
-            
-            document.getElementById('history-list').classList.add('selection-mode');
-            updateHistoryUI();
-        }
-
-        function cancelSelectionMode() {
-            isSelectionMode = false;
-            selectedReports.clear();
-            
-            document.getElementById('history-header-normal').classList.remove('hidden');
-            document.getElementById('history-header-select').classList.add('hidden');
-            document.getElementById('history-header-select').classList.remove('flex');
-            
-            document.getElementById('history-list').classList.remove('selection-mode');
-            updateHistoryUI();
-        }
-        
-        function toggleSelectAll() {
-            const items = document.querySelectorAll('.history-item');
-            if(selectedReports.size === items.length) selectedReports.clear();
-            else items.forEach(el => selectedReports.add(parseInt(el.dataset.id)));
-            updateHistoryUI();
-        }
-
-        function toggleItemSelection(id) {
-            if(selectedReports.has(id)) selectedReports.delete(id);
-            else selectedReports.add(id);
-            updateHistoryUI();
-        }
-        
-        function updateHistoryUI() {
-            const items = document.querySelectorAll('.history-item');
-            items.forEach(item => {
-                const id = parseInt(item.dataset.id);
-                const circle = item.querySelector('.select-circle');
-                const dots = item.querySelector('.item-options-btn');
-                
-                if(isSelectionMode) {
-                    circle.style.display = 'flex';
-                    dots.style.display = 'none';
-                    if(selectedReports.has(id)) item.classList.add('selected');
-                    else item.classList.remove('selected');
-                } else {
-                    circle.style.display = 'none';
-                    dots.style.display = 'block';
-                    item.classList.remove('selected');
-                }
+        // 3. Start Backend Task
+        try {
+            const res = await fetch("{{ url_for('start_report') }}", { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    query: currentQuery, 
+                    format_key: formatKey, 
+                    format_content: formatContent, 
+                    page_count: pageCount 
+                }) 
             });
-            document.getElementById('selected-count').innerText = `${selectedReports.size} selected`;
+            
+            const data = await res.json();
+            
+            if(data.task_id) {
+                intervalId = setInterval(() => checkStatus(data.task_id), 3000);
+            } else {
+                alert("Failed to start task: " + (data.error || "Unknown error"));
+                resetView();
+            }
+        } catch(err) { 
+            console.error(err);
+            alert("Network error starting task");
+            resetView();
         }
+    };
 
-        async function deleteSelected() {
-            if (selectedReports.size === 0) return;
-            if (!confirm(`Delete ${selectedReports.size} reports?`)) return;
-            for (let id of selectedReports) await fetch(`/api/report/${id}`, { method: 'DELETE' });
-            cancelSelectionMode();
-            fetchHistory();
+    // --- PROGRESS LOGIC (ANIMATION FIXED) ---
+    function updateProgressVisuals(activeStep, text) {
+        for (let i = 1; i <= 4; i++) {
+            const el = document.getElementById(`step-${i}`);
+            if (!el) continue;
+
+            // Clean classes to ensure smooth transition
+            el.className = "progress-step absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform";
+
+            if (i < activeStep) {
+                // Previous: Float UP and Fade Out
+                el.classList.add('opacity-0', '-translate-y-12', 'scale-95', 'z-0');
+            } else if (i === activeStep) {
+                // Current: Center and Fade In
+                el.classList.add('opacity-100', 'translate-y-0', 'scale-100', 'z-10');
+                const textEl = document.getElementById(`step-${i}-text`);
+                if (textEl && text) textEl.innerText = text;
+            } else {
+                // Next: Stay DOWN and Invisible
+                el.classList.add('opacity-0', 'translate-y-12', 'scale-95', 'z-0');
+            }
         }
+    }
 
-        // --- SINGLE DELETE ---
-        async function deleteReport(id) {
-            if(!confirm("Delete this report?")) return;
-            await fetch(`/api/report/${id}`, { method: 'DELETE' });
-            fetchHistory();
-        }
+    async function checkStatus(taskId) {
+        try {
+            const res = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId));
+            const data = await res.json();
 
-        // --- DATA FETCHING ---
-        async function fetchHistory() {
-            try {
-                const res = await fetch("/api/history");
-                const data = await res.json();
-                const list = document.getElementById('history-list');
-                list.innerHTML = "";
+            if (data.status === 'SUCCESS') {
+                clearInterval(intervalId);
+                updateProgressVisuals(4, "Done!");
                 
-                if(data.length === 0) {
-                    list.innerHTML = '<div class="text-center text-gray-500 py-4 text-xs">No reports yet.</div>';
-                    return;
-                }
-                
-                data.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = "history-item";
-                    div.dataset.id = item.id;
+                setTimeout(() => {
+                    progressSection.classList.add('hidden');
+                    resultsContainer.classList.remove('hidden');
+                    setTimeout(() => resultsContainer.classList.remove('opacity-0'), 100);
                     
-                    div.onclick = (e) => {
-                        // Prevent click if clicking dots or menu
-                        if(e.target.closest('.item-options-btn') || e.target.closest('.popover-menu')) return;
-                        
-                        if (isSelectionMode) toggleItemSelection(item.id);
-                        else loadHistoryItem(item.id);
-                    };
-
-                    div.innerHTML = `
-                        <div class="select-circle" style="display: none;"></div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-xs font-bold text-current mb-1 line-clamp-1">${item.topic}</div>
-                            <div class="text-[10px] opacity-60">${item.date}</div>
-                        </div>
-                        <button class="item-options-btn" onclick="toggleItemMenu(${item.id}, event)">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-                        </button>
-                        <div id="item-menu-${item.id}" class="popover-menu" style="right: 10px; top: 40px;">
-                            <div class="menu-option danger" onclick="deleteReport(${item.id})">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Delete
-                            </div>
-                        </div>
-                    `;
-                    list.appendChild(div);
-                });
+                    showResults(data.report_content, data.chart_path);
+                }, 1000);
                 
-                // If we were in selection mode, restore UI state
-                if(isSelectionMode) updateHistoryUI();
+            } else if (data.status === 'FAILURE') {
+                clearInterval(intervalId);
+                alert("Error: " + data.error);
+                resetView();
                 
-            } catch(e) {
-                document.getElementById('history-list').innerHTML = '<div class="text-center text-red-400 py-4 text-xs">Error.</div>';
-            }
-        }
-
-        async function loadHistoryItem(id) {
-            historyPanel.classList.remove('is-open');
-            document.getElementById('input-section').classList.add('hidden');
-            document.getElementById('progress-section').classList.add('hidden');
-            document.getElementById('results-container').classList.remove('hidden');
-            setTimeout(() => document.getElementById('results-container').classList.remove('opacity-0'), 100);
-            try {
-                const res = await fetch(`/api/report/${id}`);
-                const data = await res.json();
-                if(data.content) {
-                    currentQuery = data.topic;
-                    showResults(data.content); // No chart storage yet for history
+            } else {
+                // Map status steps
+                let step = 1;
+                if(data.message) {
+                    const msg = data.message.toLowerCase();
+                    if(msg.includes("step 2") || msg.includes("synthesiz")) step = 2;
+                    else if(msg.includes("step 3") || msg.includes("writ") || msg.includes("visualiz")) step = 3;
+                    else if(msg.includes("step 4") || msg.includes("finaliz")) step = 4;
                 }
-            } catch(e) {}
-        }
-
-        // --- STANDARD APP FUNCTIONS (Keep existing) ---
-        const settingsOverlay = document.getElementById('settings-overlay');
-        const settingsPanel = document.getElementById('settings-panel');
-        const openSettingsBtn = document.getElementById('settings-open-btn');
-        const closeSettingsBtn = document.getElementById('settings-close-btn');
-        function openSettings() { settingsOverlay.classList.remove('hidden'); settingsPanel.classList.remove('hidden'); setTimeout(() => { settingsPanel.classList.remove('scale-95', 'opacity-0'); settingsPanel.classList.add('scale-100', 'opacity-100'); }, 10); }
-        function closeSettings() { settingsPanel.classList.remove('scale-100', 'opacity-100'); settingsPanel.classList.add('scale-95', 'opacity-0'); setTimeout(() => { settingsOverlay.classList.add('hidden'); settingsPanel.classList.add('hidden'); }, 300); }
-        openSettingsBtn.onclick = openSettings; closeSettingsBtn.onclick = closeSettings; settingsOverlay.onclick = () => { closeSettings(); if(historyPanel.classList.contains('is-open')) toggleHistoryPanel(); };
-
-        const themeBtns = { light: document.getElementById('theme-light-btn'), dark: document.getElementById('theme-dark-btn'), default: document.getElementById('theme-default-btn') };
-        function applyTheme(theme) {
-            document.body.className = 'min-h-screen flex';
-            if (theme === 'light') document.body.classList.add('light-theme');
-            if (theme === 'dark') document.body.classList.add('dark-theme');
-            localStorage.setItem('theme', theme);
-            Object.values(themeBtns).forEach(btn => btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition-all hover:bg-white/5');
-            if(themeBtns[theme]) {
-                const btn = themeBtns[theme];
-                if(theme === 'default') btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium bg-[#7aa2f7] text-[#1a1b26] shadow-lg shadow-blue-500/20';
-                else btn.className = 'px-3 py-1.5 rounded-md text-xs font-medium bg-white text-black shadow-sm';
+                updateProgressVisuals(step, data.message);
             }
-        }
-        themeBtns.light.onclick = () => applyTheme('light'); themeBtns.dark.onclick = () => applyTheme('dark'); themeBtns.default.onclick = () => applyTheme('default');
-        applyTheme(localStorage.getItem('theme') || 'default');
+        } catch(e) { console.error("Polling error", e); }
+    }
 
-        // FORM LOGIC
-        const inputSection = document.getElementById('input-section');
-        const progressSection = document.getElementById('progress-section');
-        const resultsContainer = document.getElementById('results-container');
-        const form = document.getElementById('report-form');
-        const queryInput = document.getElementById('query');
-        const formatSelect = document.getElementById('format-select');
-        const pageSelect = document.getElementById('page-select');
-        const customContainer = document.getElementById('custom-format-container');
-        const customInput = document.getElementById('custom-format-input');
-        const outputEl = document.getElementById('report-output');
-        const resultTopicDisplay = document.getElementById('result-topic-display');
+    function resetProgressVisuals() {
+        // Reset all to "below" state
+        for (let i = 1; i <= 4; i++) {
+            const el = document.getElementById(`step-${i}`);
+            if(el) el.className = "progress-step absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform opacity-0 translate-y-12 scale-95 z-0";
+        }
+    }
+
+    // --- RESULT LOGIC ---
+    function showResults(content, chartPath) {
+        currentReportContent = content;
+        currentChartPath = chartPath;
+        resultTopicDisplay.innerText = currentQuery;
         
-        async function fetchFormats() { try { const response = await fetch("{{ url_for('get_report_formats') }}"); if (response.ok) { const reportFormats = await response.json(); customInput.value = reportFormats['custom'] || ""; } } catch (e) { } }
-        fetchFormats();
-        formatSelect.onchange = () => { if (formatSelect.value === 'custom') { customContainer.classList.remove('hidden'); customInput.focus(); } else { customContainer.classList.add('hidden'); } };
-
-        form.onsubmit = async (e) => {
-            e.preventDefault(); currentQuery = queryInput.value; let formatKey = formatSelect.value; let formatContent = customInput.value; let pageCount = parseInt(pageSelect.value);
-            inputSection.classList.add('transform', '-translate-x-full', 'opacity-0');
-            setTimeout(() => { inputSection.classList.add('hidden'); progressSection.classList.remove('hidden'); resetProgressVisuals(); updateProgressVisuals(1, "Starting research..."); }, 500); 
-            try { const startRes = await fetch("{{ url_for('start_report') }}", { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ query: currentQuery, format_key: formatKey, format_content: formatContent, page_count: pageCount }) }); const data = await startRes.json(); intervalId = setInterval(() => checkStatus(data.task_id), 3000); } catch (err) { alert("Error starting task"); resetView(); }
-        };
-
-        async function checkStatus(taskId) {
-            try { const res = await fetch(`{{ url_for('report_status', task_id='TASK_ID') }}`.replace('TASK_ID', taskId)); const data = await res.json();
-                if (data.status === 'SUCCESS') { clearInterval(intervalId); updateProgressVisuals(4, "Done!"); setTimeout(() => { progressSection.classList.add('hidden'); resultsContainer.classList.remove('hidden'); setTimeout(() => resultsContainer.classList.remove('opacity-0'), 100); if (data.chart_path) showResults(data.report_content, data.chart_path); else showResults(data.report_content); fetchHistory(); }, 1000); } else if (data.status === 'FAILURE') { clearInterval(intervalId); alert("Error: " + data.error); resetView(); } else { if(data.message) updateProgressVisuals(data.message.includes("Step 1")?1:data.message.includes("Step 2")?2:3, data.message); }
-            } catch(e) {}
+        let html = "";
+        if (chartPath) { 
+            const browserPath = chartPath.replace('/app/static', '/static'); 
+            html += `<div class="mb-8 p-4 bg-black/20 rounded-xl border border-white/5 flex justify-center"><img src="${browserPath}" class="rounded-lg shadow-lg max-h-[400px]"></div>`; 
         }
-        function updateProgressVisuals(activeStep, text) { const textEl = document.getElementById(`step-${activeStep}-text`); if(textEl) textEl.innerText = text; }
-        function resetProgressVisuals() {}
-        function showResults(content, chartPath = null) {
-            currentReportContent = content; resultTopicDisplay.innerText = currentQuery; let html = "";
-            if (chartPath) { const browserPath = chartPath.replace('/app/static', '/static'); html += `<div class="mb-8 p-4 bg-black/20 rounded-xl border border-white/5"><img src="${browserPath}" class="w-full rounded-lg shadow-lg"></div>`; }
-            html += marked.parse(content); outputEl.innerHTML = html;
-        }
-        function resetView() { resultsContainer.classList.add('hidden'); progressSection.classList.add('hidden'); inputSection.classList.remove('hidden'); setTimeout(() => { inputSection.classList.remove('-translate-x-full', 'opacity-0'); }, 50); queryInput.value = ""; }
-        window.downloadFile = function(format) { const dlForm = document.getElementById('download-form'); document.getElementById('dl-content').value = currentReportContent; document.getElementById('dl-topic').value = currentQuery; document.getElementById('dl-format').value = format; if(currentChartPath) document.getElementById('dl-chart-path').value = currentChartPath; dlForm.submit(); };
-    </script>
-</body>
-</html>
+        
+        html += marked.parse(content);
+        reportOutput.innerHTML = html;
+        
+        styleReportOutput();
+    }
+
+    function styleReportOutput() {
+        reportOutput.querySelectorAll('h1').forEach(h => h.className = 'text-3xl font-bold text-blue-200 mt-8 mb-4 border-b border-white/10 pb-2');
+        reportOutput.querySelectorAll('h2').forEach(h => h.className = 'text-2xl font-bold text-white mt-6 mb-3');
+        reportOutput.querySelectorAll('h3').forEach(h => h.className = 'text-xl font-semibold text-white mt-4 mb-2');
+        reportOutput.querySelectorAll('p').forEach(p => p.className = 'mb-4 leading-relaxed text-gray-300');
+        reportOutput.querySelectorAll('ul').forEach(u => u.className = 'list-disc pl-6 mb-4 space-y-1 text-gray-300');
+        reportOutput.querySelectorAll('ol').forEach(o => o.className = 'list-decimal pl-6 mb-4 space-y-1 text-gray-300');
+        reportOutput.querySelectorAll('blockquote').forEach(b => b.className = 'border-l-4 border-blue-500 pl-4 py-1 italic text-gray-400 bg-white/5 rounded-r my-4');
+        reportOutput.querySelectorAll('table').forEach(t => t.className = 'w-full text-left border-collapse my-6');
+        reportOutput.querySelectorAll('th').forEach(t => t.className = 'border-b border-white/20 p-2 text-blue-300 font-semibold');
+        reportOutput.querySelectorAll('td').forEach(t => t.className = 'border-b border-white/10 p-2 text-sm');
+    }
+
+    function resetView() {
+        resultsContainer.classList.add('hidden', 'opacity-0');
+        progressSection.classList.add('hidden');
+        inputSection.classList.remove('hidden', 'opacity-0', '-translate-x-full');
+        queryInput.value = "";
+    }
+
+    // --- DOWNLOAD ---
+    window.downloadFile = function(format) {
+        const dlForm = document.getElementById('download-form');
+        document.getElementById('dl-content').value = currentReportContent;
+        document.getElementById('dl-topic').value = currentQuery;
+        document.getElementById('dl-format').value = format;
+        if(currentChartPath) document.getElementById('dl-chart-path').value = currentChartPath;
+        dlForm.submit();
+    };
+</script>
+{% endblock %}

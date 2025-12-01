@@ -1,8 +1,8 @@
 fastapi
-uvicorn
+uvicorn[standard]
 jinja2
 python-multipart
-celery
+celery[redis]
 redis
 requests
 beautifulsoup4

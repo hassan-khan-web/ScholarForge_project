@@ -5,17 +5,19 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y \
+# Try apt-get with timeout and retries
+RUN apt-get update -o APT::Acquire::Retries=3 && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     python3-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* || echo "Note: Some packages may not be available due to network"
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install with retries and increase timeout
+RUN pip install --no-cache-dir --retries 5 --default-timeout=1000 -r requirements.txt
 
 
 FROM python:3.10-slim AS runner

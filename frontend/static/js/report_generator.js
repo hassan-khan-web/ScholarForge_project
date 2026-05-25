@@ -41,8 +41,6 @@
   byId('btn-do-confirm')?.addEventListener('click', () => { hideModal('confirm-modal'); if (typeof _confirmCb === 'function') _confirmCb(); _confirmCb = null; });
 
   window.toggleSelectMode = function () { showToast('Toggled select mode'); };
-  window.selectAllReports = function () { showToast('Selected all reports'); };
-  window.deleteSelectedReports = function () { showConfirm('Delete reports', 'Delete selected reports?', () => showToast('Deleted selected reports')); };
 
   window.openMergePanel = function () { showModal('merge-panel'); };
   window.closeMergePanel = function () { hideModal('merge-panel'); };
@@ -145,7 +143,7 @@
     } else {
       document.getElementById('standard-progress')?.classList.remove('hidden');
       document.getElementById('council-animation-container')?.classList.add('hidden');
-      document.getElementById('progress-line-fill').style.height = '10%';
+      document.getElementById('std-progress-bar').style.width = '5%';
       animateStep(1);
     }
 
@@ -157,7 +155,7 @@
       .then(data => {
         if (data.error) throw new Error(data.error);
         if (data.task_id) {
-          pollTaskStatus(data.task_id, useCouncil);
+          connectWebSocketProgress(data.task_id, useCouncil);
         } else {
           throw new Error('No task ID returned');
         }
@@ -170,35 +168,41 @@
   }
 
   function animateStep(num) {
-    const line = document.getElementById('progress-line-fill');
-    if (line) line.style.height = (num * 25) + '%';
+    // Update progress bar width
+    const bar = document.getElementById('std-progress-bar');
+    if (bar) bar.style.width = (num * 25) + '%';
+
+    const checkSVG = '<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+    const spinSVG = '<svg class="w-3 h-3 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>';
 
     for (let i = 1; i <= 4; i++) {
-      const el = document.getElementById('step-' + i);
-      if (!el) continue;
+      const step = document.getElementById('std-step-' + i);
+      const icon = document.getElementById('std-icon-' + i);
+      const label = document.getElementById('std-label-' + i);
+      if (!step || !icon) continue;
 
-      const iconBox = el.querySelector('div');
-      const txt = document.getElementById('step-' + i + '-text');
-
-      if (i === num) {
-        el.style.opacity = '1';
-        el.classList.add('scale-100');
-        el.classList.remove('scale-95');
-
-        if (iconBox) {
-          iconBox.classList.remove('bg-[var(--bg-panel)]', 'border-[var(--border-color)]');
-          iconBox.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
-          const svg = iconBox.querySelector('svg');
-          if (svg) svg.classList.remove('text-[var(--text-muted)]');
+      if (i < num) {
+        // Completed
+        icon.className = 'w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center bg-emerald-500';
+        icon.innerHTML = checkSVG;
+        if (label) label.classList.add('text-[var(--text-main)]');
+        step.style.opacity = '1';
+      } else if (i === num) {
+        // Active / Processing
+        icon.className = 'w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center border-2 border-blue-400';
+        icon.innerHTML = spinSVG;
+        if (label) {
+          label.classList.add('text-[var(--text-main)]', 'font-semibold');
         }
-        if (txt) txt.textContent = "Processing...";
-      } else if (i < num) {
-        el.style.opacity = '0.6';
-        if (iconBox) {
-          iconBox.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
-          iconBox.classList.add('bg-green-600', 'border-green-600', 'text-white');
+        step.style.opacity = '1';
+      } else {
+        // Pending
+        icon.className = 'std-step-icon w-5 h-5 flex-shrink-0 rounded-full border-2 border-[var(--border-color)] flex items-center justify-center';
+        icon.innerHTML = '';
+        if (label) {
+          label.classList.remove('text-[var(--text-main)]', 'font-semibold');
         }
-        if (txt) txt.textContent = "Completed";
+        step.style.opacity = '0.5';
       }
     }
   }
@@ -206,112 +210,129 @@
   // --- Council Animation Helpers ---
   function updateCouncilAnim(msg) {
     const statusText = document.getElementById('council-status-text');
-    if (statusText) statusText.textContent = msg;
+    const phaseTitle = document.getElementById('council-phase-title');
+    if (!statusText || !phaseTitle) return;
 
-    // Reset All Active States First (optional, or keep cumulative)
-    // keeping cumulative for "flow"
-
-    // Determine State & Trigger Specific Particle Moves
-    if (msg.includes('Step 1') || msg.includes('Step 2') || msg.includes('Plan')) {
-      activateAgent('agent-planner');
+    statusText.textContent = msg.length > 50 ? msg.substring(0, 47) + '...' : msg;
+    const fill = document.getElementById('council-flow-fill');
+    
+    function resetNodes() {
+        ['legion', 'nexus', 'inquisitor', 'artisan'].forEach(node => {
+            const el = document.getElementById('agent-node-' + node);
+            const circle = document.getElementById('agent-circle-' + node);
+            if (el) el.className = "flex flex-col items-center text-center z-10 opacity-30 transition-all duration-500";
+            if (circle) circle.className = "w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-color)] flex items-center justify-center shadow-lg transition-all duration-500 text-[var(--text-muted)]";
+        });
     }
-    else if (msg.includes('Step 3') || msg.includes('Search')) {
-      activateAgent('agent-researcher');
-      moveParticle('p-plan-res'); // Planner -> Researcher
-      activateConn('conn-planner');
-      activateConn('conn-researcher');
-    }
-    else if (msg.includes('Step 4') || msg.includes('Step 5') || msg.includes('Writ') || msg.includes('Draft')) {
-      activateAgent('agent-writer');
-      moveParticle('p-res-wri'); // Researcher -> Writer
-      activateConn('conn-researcher');
-      activateConn('conn-writer');
-    }
-    else if (msg.includes('Step 6') || msg.includes('Review') || msg.includes('Critic')) {
-      activateAgent('agent-reviewer');
-      moveParticle('p-wri-rev'); // Writer -> Reviewer
-      activateConn('conn-writer');
-      activateConn('conn-reviewer');
-    }
-    else if (msg.includes('Step 7') || msg.includes('Final')) {
-      activateAgent('agent-coordinator');
-      moveParticle('p-rev-coo'); // Reviewer -> Coordinator
-      activateConn('conn-reviewer');
-    }
-  }
 
-  function activateAgent(id) {
-    document.getElementById(id)?.classList.add('active');
-  }
+    function highlightNode(node, colorClass) {
+        resetNodes();
+        const el = document.getElementById('agent-node-' + node);
+        const circle = document.getElementById('agent-circle-' + node);
+        if (el) el.className = "flex flex-col items-center text-center z-10 opacity-100 scale-110 transition-all duration-500";
+        if (circle) circle.className = `w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 ${colorClass} flex items-center justify-center shadow-lg transition-all duration-500`;
+    }
 
-  function activateConn(id) {
-    document.getElementById(id)?.classList.add('active');
-  }
-
-  function moveParticle(animName) {
-    const p = document.getElementById('council-particle');
-    if (!p) return;
-    // Reset animation to trigger reflow
-    p.style.animation = 'none';
-    p.style.opacity = '0';
-    p.offsetHeight; /* trigger reflow */
-
-    p.classList.add('particle-moving');
-    p.style.animationName = animName;
-    p.style.opacity = '1';
+    if (msg.includes('Step 1') || msg.includes('Step 2') || msg.includes('Processing') || msg.includes('Inputs')) {
+      phaseTitle.textContent = "Processing Raw Context";
+      if (fill) fill.style.width = '0%';
+    }
+    else if (msg.includes('Step 3') || msg.includes('Search') || msg.includes('Synthesizing') || msg.includes('Summary')) {
+      phaseTitle.textContent = "Synthesizing Fact-Base";
+      if (fill) fill.style.width = '12%';
+    }
+    else if (msg.includes('Legion') || msg.includes('variants')) {
+      phaseTitle.textContent = "Council: Agent Legion";
+      highlightNode('legion', 'border-blue-500 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)] animate-pulse');
+      if (fill) fill.style.width = '25%';
+    }
+    else if (msg.includes('Nexus') || msg.includes('merging') || msg.includes('Outline') || msg.includes('Step 5')) {
+      phaseTitle.textContent = "Council: Agent Nexus";
+      highlightNode('nexus', 'border-purple-500 text-purple-500 shadow-[0_0_15px_rgba(139,92,246,0.5)] animate-pulse');
+      if (fill) fill.style.width = '50%';
+    }
+    else if (msg.includes('Review') || msg.includes('Inquisitor') || msg.includes('Cycle') || msg.includes('Score') || msg.includes('critique')) {
+      phaseTitle.textContent = "Council: Inquisitor Audit";
+      highlightNode('inquisitor', 'border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse');
+      if (fill) fill.style.width = '75%';
+    }
+    else if (msg.includes('Artisan') || msg.includes('Formatting') || msg.includes('Polish') || msg.includes('Step 6') || msg.includes('Writing')) {
+      phaseTitle.textContent = "Council: Artisan Publisher";
+      highlightNode('artisan', 'border-emerald-500 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] animate-pulse');
+      if (fill) fill.style.width = '90%';
+    }
+    else if (msg.includes('Step 7') || msg.includes('Finalizing')) {
+      phaseTitle.textContent = "Compiling Artifact";
+      if (fill) fill.style.width = '100%';
+    }
   }
 
   function finishCouncilAnim() {
-    // Light up everything green
-    document.querySelectorAll('.agent-node').forEach(n => n.classList.add('success'));
-    const container = document.getElementById('council-animation-container');
-    if (container) container.classList.add('council-finished');
+    const fill = document.getElementById('council-flow-fill');
+    if (fill) fill.style.width = '100%';
+    ['legion', 'nexus', 'inquisitor', 'artisan'].forEach(node => {
+        const el = document.getElementById('agent-node-' + node);
+        const circle = document.getElementById('agent-circle-' + node);
+        if (el) el.className = "flex flex-col items-center text-center z-10 opacity-100 scale-100 transition-all duration-500";
+        if (circle) circle.className = "w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 border-emerald-500 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] flex items-center justify-center shadow-lg transition-all duration-500";
+    });
   }
 
+  function connectWebSocketProgress(taskId, useCouncil = false) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = protocol + '//' + window.location.host + '/ws/progress/' + taskId;
+    const socket = new WebSocket(wsUrl);
 
-  function pollTaskStatus(taskId, useCouncil = false) {
-    const url = window.REPORT_STATUS_URL_TEMPLATE.replace('TASK_ID_PLACEHOLDER', taskId);
+    socket.onopen = function () {
+      console.log('WebSocket connected for task:', taskId);
+    };
 
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (data.status === 'SUCCESS') {
-          if (useCouncil) {
-            updateCouncilAnim('Finalizing: Merging Reports...');
-            finishCouncilAnim();
-            setTimeout(() => displayResults(data), 1200);
-          } else {
-            animateStep(4);
-            setTimeout(() => displayResults(data), 1000);
-          }
-        } else if (data.status === 'FAILURE') {
-          showToast('Error: ' + (data.error || 'Unknown error'));
-          setTimeout(resetView, 3000);
+    socket.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+
+      if (data.status === 'SUCCESS') {
+        if (useCouncil) {
+          updateCouncilAnim('Finalizing manuscript...');
+          finishCouncilAnim();
+          setTimeout(() => {
+            displayResults(data);
+            socket.close();
+          }, 1200);
         } else {
-          const msg = data.message || '';
-
-          if (useCouncil) {
-            updateCouncilAnim(msg);
-          } else {
-            // Standard Linear Update
-            if (msg.includes('Step 1') || msg.includes('Step 2')) animateStep(1);
-            else if (msg.includes('Step 3') || msg.includes('Search')) animateStep(1);
-            else if (msg.includes('Step 4') || msg.includes('Visuals')) animateStep(2);
-            else if (msg.includes('Step 5') || msg.includes('Structure')) animateStep(2);
-            else if (msg.includes('Step 6') || msg.includes('Writing')) animateStep(3);
-            else if (msg.includes('Step 7')) animateStep(4);
-
-            const activeStep = document.querySelector('.scale-100.opacity-100 p.text-xs');
-            if (activeStep) activeStep.textContent = msg.length > 50 ? msg.substring(0, 47) + '...' : msg;
-          }
-
-          setTimeout(() => pollTaskStatus(taskId, useCouncil), 2000);
+          animateStep(4);
+          setTimeout(() => {
+            displayResults(data);
+            socket.close();
+          }, 1000);
         }
-      })
-      .catch(e => {
-        console.error(e);
-        setTimeout(() => pollTaskStatus(taskId, useCouncil), 3000);
-      });
+      } else if (data.status === 'FAILURE') {
+        showToast('Error: ' + (data.error || 'Research failed'));
+        setTimeout(() => {
+          resetView();
+          socket.close();
+        }, 3000);
+      } else {
+        const msg = data.message || '';
+        if (useCouncil) {
+          updateCouncilAnim(msg);
+        } else {
+          if (msg.includes('Step 1') || msg.includes('Step 2')) animateStep(1);
+          else if (msg.includes('Step 3') || msg.includes('Search')) animateStep(1);
+          else if (msg.includes('Step 4') || msg.includes('Visuals')) animateStep(2);
+          else if (msg.includes('Step 5') || msg.includes('Structure')) animateStep(2);
+          else if (msg.includes('Step 6') || msg.includes('Writing')) animateStep(3);
+          else if (msg.includes('Step 7')) animateStep(4);
+        }
+      }
+    };
+
+    socket.onerror = function (error) {
+      console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = function () {
+      console.log('WebSocket connection closed');
+    };
   }
 
   function displayResults(data) {
@@ -340,11 +361,45 @@
         content = content.replace(/\n\n/g, '<br><br>');
       }
 
+      // Convert [1], [2] to interactive badges
+      content = content.replace(/\[(\d+)\]/g, (match, num) => {
+        return `<span class="citation-badge bg-blue-500/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold inline-flex items-center justify-center cursor-pointer transition-all duration-300 shadow-sm" data-citation="${num}">[${num}]</span>`;
+      });
+
       if (data.chart_path) {
         content = `<div class="mb-8 p-4 bg-white/5 rounded-xl border border-white/10 flex justify-center"><img src="/${data.chart_path}" class="max-w-full rounded-lg shadow-lg" alt="Analysis Chart"></div>` + content;
       }
 
       document.getElementById('report-output').innerHTML = content;
+
+      // Bind smooth scroll and highlight handlers for citation clicks
+      document.getElementById('report-output').querySelectorAll('.citation-badge').forEach(badge => {
+        badge.addEventListener('click', function(e) {
+          e.preventDefault();
+          const num = this.getAttribute('data-citation');
+          const outputEl = document.getElementById('report-output');
+          const allEls = outputEl.querySelectorAll('p, li, div');
+          let targetEl = null;
+          for (let el of allEls) {
+            const text = el.textContent.trim();
+            if (text.startsWith('[' + num + ']') && !el.classList.contains('citation-badge')) {
+              targetEl = el;
+              break;
+            }
+          }
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.style.transition = 'background-color 0.5s ease';
+            targetEl.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+            setTimeout(() => {
+              targetEl.style.backgroundColor = 'transparent';
+            }, 2000);
+          } else {
+            showToast('Reference [' + num + '] is detailed at the bottom of the report.');
+          }
+        });
+      });
+
       document.getElementById('result-topic-display').textContent = document.getElementById('query').value;
 
       document.getElementById('dl-content').value = data.report_content;
@@ -353,7 +408,7 @@
       document.getElementById('dl-chart-path').value = data.chart_path || '';
 
       // Refresh history
-      loadHistory();
+      if (typeof window.loadHistory === 'function') window.loadHistory();
     }
   }
 
@@ -366,47 +421,6 @@
     }
   };
 
-  function loadHistory() {
-    const container = document.getElementById('history-list-content');
-    if (!container) return;
-
-    container.innerHTML = '<div class="text-xs text-[var(--text-muted)] p-2">Loading...</div>';
-
-    fetch('/api/history')
-      .then(r => r.json())
-      .then(data => {
-        container.innerHTML = '';
-        if (data.length === 0) {
-          container.innerHTML = '<div class="text-xs text-[var(--text-muted)] p-4 text-center">No reports generated yet.</div>';
-          return;
-        }
-
-        data.forEach(item => {
-          const div = document.createElement('div');
-          div.className = 'p-3 hover:bg-[var(--hover-bg)] cursor-pointer border-b border-[var(--border-color)] group transition-colors';
-          div.innerHTML = `
-            <div class="flex justify-between items-start mb-1">
-              <h4 class="text-xs font-bold text-[var(--text-main)] line-clamp-2 group-hover:text-blue-500 transition-colors">${item.topic}</h4>
-            </div>
-            <div class="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
-              <span>${item.date}</span>
-              <button onclick="showReportOptions(event, ${item.id}, '${item.topic.replace(/'/g, "\\'")}')" class="p-0.5 hover:bg-[var(--hover-bg)] rounded opacity-0 group-hover:opacity-100 transition-opacity" title="Options">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
-              </button>
-            </div>
-          `;
-          div.onclick = (e) => {
-            if (!e.target.closest('button')) viewReport(item.id);
-          };
-          container.appendChild(div);
-        });
-      })
-      .catch(e => {
-        console.error(e);
-        container.innerHTML = '<div class="text-xs text-red-400 p-2">Failed to load history</div>';
-      });
-  }
-
   window.viewReport = function (id) {
     if (window.innerWidth < 768) toggleHistory(); // Close panel on mobile
 
@@ -415,7 +429,7 @@
     document.getElementById('input-section')?.classList.add('hidden');
     document.getElementById('progress-section')?.classList.add('hidden');
     const resSec = document.getElementById('results-container');
-    resSec.classList.remove('hidden');
+    if (resSec) resSec.classList.remove('hidden');
     document.getElementById('report-output').innerHTML = '<div class="p-8 text-center text-[var(--text-muted)]">Loading report...</div>';
 
     fetch('/api/report/' + id)
@@ -433,32 +447,19 @@
       });
   };
 
-  window.showReportOptions = function (e, id, topic) {
-    e.stopPropagation();
-    if (window.showContextMenu) {
-      window.showContextMenu(e.clientX, e.clientY, [
-        { label: 'View', action: () => viewReport(id) },
-        { label: 'Delete', action: () => deleteReport(null, id) }
-      ]);
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.loadHistory === 'function') window.loadHistory();
+    
+    // Check if ?report_id=X is present in the URL on load
+    const urlParams = new URLSearchParams(window.location.search);
+    const reportId = urlParams.get('report_id');
+    if (reportId) {
+      setTimeout(() => {
+        window.viewReport(parseInt(reportId));
+        // Clean URL parameters without reloading
+        window.history.replaceState({}, document.title, "/");
+      }, 300);
     }
-  };
-
-  window.deleteReport = function (e, id) {
-    if (e) e.stopPropagation();
-    showConfirm('Delete Report', 'Permanently delete this report?', () => {
-      fetch('/api/report/' + id, { method: 'DELETE' })
-        .then(r => r.json())
-        .then(res => {
-          if (res.status === 'success') {
-            showToast('Report deleted');
-            loadHistory();
-          } else {
-            showToast('Error deleting report');
-          }
-        });
-    });
-  };
-
-  document.addEventListener('DOMContentLoaded', () => { loadHistory(); });
+  });
 
 })();

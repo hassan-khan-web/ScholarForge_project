@@ -34,7 +34,8 @@ async def agent_nexus(drafts: List[str], section_title: str) -> str:
         "2. Keep the BEST stats, tables, and insights from ALL drafts.\n"
         "3. Maintain a unified professional tone.\n"
         "4. Structure with clear Markdown headers.\n"
-        "5. Output ONLY the synthesized content."
+        "5. Preserve all inline citation brackets (e.g. [1], [2]) and align them accurately with their facts.\n"
+        "6. Output ONLY the synthesized content."
     )
     
     return await call_model_async(LEGION_MODELS[0], "You are The Nexus, a Master Synthesizer.", combined_input + prompt)

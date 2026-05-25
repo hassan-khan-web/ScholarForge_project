@@ -29,14 +29,14 @@
                 </div>
             </button>
 
-            <button class="icon-btn hover:bg-[var(--hover-bg)] shrink-0 z-10 expanded-only px-0 py-3" title="Search">
+            <a href="{{ url_for('search_page') }}" class="icon-btn hover:bg-[var(--hover-bg)] shrink-0 z-10 expanded-only px-0 py-3" title="Search">
                 <div class="w-[64px] flex justify-center shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                 </div>
-            </button>
+            </a>
         </div>
 
         <div class="flex-1 overflow-y-auto py-4 custom-scrollbar space-y-4 flex flex-col overflow-x-hidden">
@@ -87,8 +87,23 @@
 
         </div>
 
-        <div class="sidebar-section border-t border-[var(--border-color)]">
-            <button onclick="openSettingsModal()" class="icon-btn shrink-0 px-0 py-3" title="Settings">
+        <!-- Consolidated Sidebar Footer (Settings & Account) -->
+        <div class="sidebar-section border-t border-[var(--border-color)] flex items-center w-full px-0 mt-auto shrink-0 select-none">
+            <!-- Left: Account Info & Initials Avatar -->
+            <div class="flex items-center gap-3 px-0 py-3 w-[150px] min-w-0">
+                <div class="w-[64px] flex justify-center shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-[10px] shadow-md shrink-0 select-none animate-pulse animate-duration-1000" id="user-avatar-initials">
+                        U
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0 nav-text">
+                    <p class="text-xs font-semibold text-[var(--text-main)] truncate" id="user-username-display">User</p>
+                    <button onclick="submitLogout()" class="text-[9px] text-red-500 hover:text-red-600 font-semibold tracking-wide transition-colors text-left block uppercase">Sign Out</button>
+                </div>
+            </div>
+
+            <!-- Right: Settings icon button, behaves like Search button in collapsing -->
+            <button onclick="openSettingsModal()" class="icon-btn hover:bg-[var(--hover-bg)] shrink-0 z-10 expanded-only px-0 py-3" title="Settings" id="sidebar-settings-btn">
                 <div class="w-[64px] flex justify-center shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -97,12 +112,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
-                </div>
-            </button>
-
-            <button class="icon-btn expanded-only shrink-0 px-0 py-3" title="Profile">
-                <div class="w-[64px] flex justify-center shrink-0">
-                    <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 shadow-md"></div>
                 </div>
             </button>
         </div>
@@ -133,6 +142,9 @@
             if (!p) return;
             // logic: if it has -translate-x-full, it is hidden. Remove to show.
             p.classList.toggle('-translate-x-full');
+            if (!p.classList.contains('-translate-x-full')) {
+                if (typeof window.loadHistory === 'function') window.loadHistory();
+            }
         }
 
         // Dropdown Logic
@@ -177,12 +189,12 @@
                     <div id="history-menu-dropdown"
                         class="dropdown-menu-custom absolute right-0 top-full mt-2 w-48 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-lg shadow-xl hidden z-50 transform transition-all duration-200 origin-top-right">
                         <div class="py-1">
-                            <button onclick="console.log('Select All')"
+                            <button onclick="selectAllReports()"
                                 class="w-full text-left px-4 py-2 text-sm text-[var(--text-main)] hover:bg-[var(--hover-bg)]">Select
                                 All</button>
-                            <button onclick="console.log('Delete All')"
+                            <button onclick="deleteSelectedReports()"
                                 class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[var(--hover-bg)]">Delete
-                                All</button>
+                                Selected / All</button>
                         </div>
                     </div>
                 </div>
@@ -298,7 +310,7 @@
     <!-- Merge Hooks Panel -->
     <div id="merge-panel" class="custom-modal-overlay">
         <div
-            class="bg-[var(--bg-panel)] rounded-2xl shadow-2xl w-[95vw] h-[85vh] max-w-7xl border border-[var(--border-color)] modal-pop flex flex-col overflow-hidden">
+            class="bg-[var(--bg-panel)] rounded-2xl shadow-2xl w-[98vw] h-[92vh] max-w-8xl border border-[var(--border-color)] modal-pop flex flex-col overflow-hidden">
             <!-- Header -->
             <div
                 class="h-14 flex items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--bg-main)] shrink-0">
@@ -325,27 +337,75 @@
                 </div>
 
                 <!-- Middle: Report Content (45%) -->
-                <div class="w-[45%] flex flex-col bg-[var(--bg-panel)]">
-                    <div class="px-4 py-2 border-b border-[var(--border-color)] flex items-center justify-between">
-                        <h4 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Report Content
-                        </h4>
+                <div class="w-[45%] flex flex-col bg-[var(--bg-panel)] relative overflow-hidden">
+                    <!-- Header with Tabs -->
+                    <div class="px-4 py-2 border-b border-[var(--border-color)] flex items-center justify-between shrink-0 bg-[var(--bg-panel)]">
+                        <div class="flex items-center gap-3">
+                            <h4 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Report</h4>
+                            <div class="relative flex bg-[var(--bg-main)] p-0.5 rounded-lg border border-[var(--border-color)] w-32">
+                                <div id="merge-tab-indicator"
+                                    class="absolute top-0.5 bottom-0.5 left-0.5 w-[calc(50%-2px)] bg-[var(--accent-primary)] rounded-md transition-all duration-300 ease-in-out shadow-sm">
+                                </div>
+                                <button onclick="setMergeTab('preview')" id="merge-tab-preview"
+                                    class="relative z-10 flex-1 py-1 rounded-md text-[10px] font-bold transition-colors text-white text-center">Preview</button>
+                                <button onclick="setMergeTab('edit')" id="merge-tab-edit"
+                                    class="relative z-10 flex-1 py-1 rounded-md text-[10px] font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors text-center">Edit</button>
+                            </div>
+                        </div>
                         <span id="merge-report-title"
-                            class="text-xs text-[var(--accent-primary)] font-medium truncate max-w-[60%]"></span>
+                            class="text-xs text-[var(--accent-primary)] font-medium truncate max-w-[40%]" title=""></span>
                     </div>
-                    <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
-                        <textarea id="merge-report-content"
-                            class="w-full h-full min-h-[300px] bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl p-4 text-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] resize-none"
-                            placeholder="Select a report from the left panel to view and edit its content..."></textarea>
-                    </div>
-                    <div class="px-4 py-3 border-t border-[var(--border-color)] flex justify-end">
-                        <button onclick="saveMergeReport()"
-                            class="px-4 py-2 text-sm font-medium bg-[var(--accent-primary)] hover:opacity-90 text-white rounded-lg shadow-md transition-all flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Save
-                        </button>
+
+                    <!-- Inner Container with Relative Positioning -->
+                    <div class="flex-1 flex flex-col relative overflow-hidden">
+                        <!-- Empty State -->
+                        <div id="merge-empty-state" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-[var(--bg-panel)] z-20 transition-all duration-300">
+                            <div class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4">
+                                <svg class="w-8 h-8 text-[var(--accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xs font-bold text-[var(--text-main)] mb-1">No Report Selected</h3>
+                            <p class="text-[11px] text-[var(--text-muted)] max-w-[280px] mb-4">Select an existing report from the left panel, or upload a file from your computer to start merging research hooks.</p>
+                            
+                            <button onclick="document.getElementById('report-file-upload').click()"
+                                class="px-4 py-2 bg-[var(--accent-primary)] hover:opacity-90 text-white rounded-lg text-[11px] font-bold shadow-md transition-all flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                Upload Report File
+                            </button>
+                            <input type="file" id="report-file-upload" class="hidden" accept=".pdf,.docx,.txt,.md" onchange="handleReportFileUpload(event)">
+                        </div>
+
+                        <!-- Content Area -->
+                        <div id="merge-content-area" class="flex-1 flex flex-col overflow-hidden hidden z-10">
+                            <!-- Preview Pane -->
+                            <div id="merge-report-preview-container" class="flex-1 overflow-y-auto custom-scrollbar p-5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl m-4">
+                                <div id="merge-report-preview" class="prose dark:prose-invert max-w-none text-sm text-[var(--text-main)] leading-relaxed"></div>
+                            </div>
+                            
+                            <!-- Edit Pane -->
+                            <div id="merge-report-edit-container" class="flex-1 overflow-hidden m-4 hidden">
+                                <textarea id="merge-report-content"
+                                    class="w-full h-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl p-4 text-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] resize-none"
+                                    placeholder="Report content..."></textarea>
+                            </div>
+                            
+                            <!-- Action Footer -->
+                            <div class="px-4 py-3 border-t border-[var(--border-color)] flex justify-end bg-[var(--bg-panel)] shrink-0">
+                                <button onclick="saveMergeReport()"
+                                    class="px-4 py-2 text-xs font-bold bg-[var(--accent-primary)] hover:opacity-90 text-white rounded-lg shadow-md transition-all flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Save Report
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -395,6 +455,7 @@
         </div>
     </div>
 
+
     <div class="hidden">
         <form id="dl-helper-form" action="{{ url_for('download') }}" method="POST" target="_blank" class="hidden">
             <input type="hidden" name="report_content" id="hlp-content">
@@ -403,7 +464,7 @@
         </form>
     </div>
 
-    <script src="{{ url_for('static', path='js/global.js') }}?v=5"></script>
+    <script src="{{ url_for('static', path='js/global.js') }}?v=13"></script>
     {% block scripts %}{% endblock %}
 </body>
 

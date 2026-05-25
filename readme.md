@@ -77,6 +77,8 @@ npm install
   - `AI_engine.py`: Contains the logic for interacting with LLMs, generating summaries, creating outlines, and assembling reports.
   - `chat_engine.py`: Manages the conversational AI interactions.
 - `frontend/`: Contains the Jinja2 HTML templates (`templates/`) and static assets like generated charts and custom CSS (`static/`).
+- `docs/`: Comprehensive repository guide, containing testing, monitoring, CI/CD, and DB migration manuals.
+  - `architecture/`: 10-chapter architectural blueprint explaining RAG chunking, WebSocket streamer, and council agents logic.
 - `data/`: Directory for persistent local data (bound as a volume in Docker).
 - `Dockerfile` & `docker-compose.yml`: Container orchestration configurations.
 

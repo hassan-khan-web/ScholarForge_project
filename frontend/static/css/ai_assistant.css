@@ -213,17 +213,17 @@ body {
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 	overflow: hidden;
 	z-index: 100;
-	animation: dropdownSlide 0.15s ease-out;
+	animation: dropdownFade 0.15s ease-out;
 }
 
 .custom-select-options.show {
 	display: block;
 }
 
-@keyframes dropdownSlide {
+@keyframes dropdownFade {
 	from {
 		opacity: 0;
-		transform: translateY(-4px);
+		transform: translateY(4px);
 	}
 
 	to {
@@ -997,4 +997,20 @@ body {
   font-family: inherit;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+/* ChatGPT Style File Attachment Card */
+.chatgpt-file-card {
+  width: 240px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
+.chatgpt-file-card:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }

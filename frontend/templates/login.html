@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScholarForge - Academic Research Workspace</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Outfit & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --font-outfit: 'Outfit', sans-serif;
+            --font-inter: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-inter);
+            background-color: #0b0f19;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: var(--font-outfit);
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+            outline: none;
+        }
+
+        /* Glowing Orbs background */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(140px);
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 25s infinite alternate ease-in-out;
+        }
+
+        .glow-orb-blue {
+            background: radial-gradient(circle, #2563eb, #1d4ed8);
+            width: 500px;
+            height: 500px;
+            top: -10%;
+            left: -10%;
+        }
+
+        .glow-orb-purple {
+            background: radial-gradient(circle, #7c3aed, #6d28d9);
+            width: 450px;
+            height: 450px;
+            bottom: -10%;
+            right: -10%;
+            animation-delay: -6s;
+        }
+
+        .glow-orb-cyan {
+            background: radial-gradient(circle, #0891b2, #0e7490);
+            width: 350px;
+            height: 350px;
+            top: 40%;
+            left: 45%;
+            opacity: 0.08;
+            animation-delay: -12s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(80px, 50px) scale(1.1) rotate(45deg); }
+            100% { transform: translate(-40px, 80px) scale(0.95); }
+        }
+
+        /* Scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body class="relative min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar">
+
+    <!-- Floating Neon Glow Orbs -->
+    <div class="glow-orb glow-orb-blue"></div>
+    <div class="glow-orb glow-orb-purple"></div>
+    <div class="glow-orb glow-orb-cyan"></div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 w-full max-w-5xl glass-card rounded-3xl overflow-hidden flex flex-col md:flex-row transition-all duration-300">
+        
+        <!-- Left Side: Brand Showcase & Interactive Agent Cards (Hidden on mobile) -->
+        <div class="hidden md:flex flex-col justify-between p-10 lg:p-12 w-1/2 border-r border-white/5 bg-slate-950/40 relative">
+            <!-- Grid decorative background -->
+            <div class="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+
+            <div class="relative space-y-8">
+                <!-- Brand logo & tag -->
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <span class="text-2xl font-extrabold tracking-tight brand-font">
+                        <span class="bg-gradient-to-r from-blue-500 to-indigo-400 bg-clip-text text-transparent">Scholar</span><span>Forge</span>
+                    </span>
+                </div>
+
+                <!-- Product description -->
+                <div class="space-y-3">
+                    <h2 class="text-2xl lg:text-3xl font-extrabold text-white leading-tight">
+                        Your Multi-Agent Academic Research Workspace
+                    </h2>
+                    <p class="text-sm text-slate-400 leading-relaxed max-w-sm">
+                        Collaborate with a council of dedicated autonomous AI agents to search, synthesize, critique, and polish academic-grade reports in seconds.
+                    </p>
+                </div>
+
+                <!-- Council workflow preview -->
+                <div class="space-y-4">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-blue-500/90">Our Council Members</h4>
+                    
+                    <div class="space-y-3">
+                        <!-- Agent 1 -->
+                        <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+                            <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0 text-blue-400 font-bold text-xs">L</div>
+                            <div>
+                                <h5 class="text-xs font-bold text-slate-200">Legion (Research & Draft)</h5>
+                                <p class="text-[11px] text-slate-400">Gathers real-time academic literature and compiles multi-source outlines.</p>
+                            </div>
+                        </div>
+
+                        <!-- Agent 2 -->
+                        <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0 text-indigo-400 font-bold text-xs">N</div>
+                            <div>
+                                <h5 class="text-xs font-bold text-slate-200">Nexus (Synthesis & Structure)</h5>
+                                <p class="text-[11px] text-slate-400">Merges facts contextually, inserting clean citation indices and bibliography.</p>
+                            </div>
+                        </div>
+
+                        <!-- Agent 3 -->
+                        <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+                            <div class="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20 shrink-0 text-purple-400 font-bold text-xs">I</div>
+                            <div>
+                                <h5 class="text-xs font-bold text-slate-200">Inquisitor (Peer-Review Critique)</h5>
+                                <p class="text-[11px] text-slate-400">Evaluates drafts with professional rigor, finding logic gaps or formatting errors.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer brand info -->
+            <div class="text-slate-500 text-xs mt-10">
+                &copy; 2026 ScholarForge. Powered by Advanced AI Agent Orchestration.
+            </div>
+        </div>
+
+        <!-- Right Side: Beautiful Glassmorphic Login/Signup Form -->
+        <div class="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
+            
+            <!-- Branding displayed on mobile only -->
+            <div class="flex md:hidden items-center justify-center gap-2 mb-8">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <span class="text-xl font-extrabold tracking-tight brand-font text-white">ScholarForge</span>
+            </div>
+
+            <!-- Sliding Tab Switcher -->
+            <div class="relative flex p-1.5 bg-slate-950/80 rounded-2xl border border-white/5 w-full mb-8">
+                <div id="active-tab-indicator" class="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl transition-all duration-300 ease-out z-0 shadow-lg shadow-blue-500/25"></div>
+                <button onclick="switchForm('login')" id="btn-tab-login" class="relative flex-1 py-2.5 text-xs font-bold text-center z-10 text-white transition-colors duration-300">Sign In</button>
+                <button onclick="switchForm('signup')" id="btn-tab-signup" class="relative flex-1 py-2.5 text-xs font-bold text-center z-10 text-slate-400 transition-colors duration-300">Create Account</button>
+            </div>
+
+            <!-- LOGIN PANE -->
+            <div id="login-pane" class="space-y-6 transition-all duration-300">
+                <div class="space-y-1.5">
+                    <h3 class="text-xl font-extrabold text-white leading-tight">Welcome Back</h3>
+                    <p class="text-xs text-slate-400">Sign in to resume your academic research sessions.</p>
+                </div>
+
+                <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4 pt-2">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Username</label>
+                        <input type="text" id="login-username" required
+                            class="w-full glass-input rounded-xl px-4 py-3 text-sm"
+                            placeholder="Enter your username">
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Password</label>
+                        </div>
+                        <input type="password" id="login-password" required
+                            class="w-full glass-input rounded-xl px-4 py-3 text-sm"
+                            placeholder="••••••••">
+                    </div>
+
+                    <button type="submit" id="btn-login-submit"
+                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-105 active:scale-[0.99] text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20 transition-all mt-4 uppercase tracking-wider flex items-center justify-center gap-2">
+                        <span>Sign In</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+            <!-- SIGNUP PANE (HIDDEN BY DEFAULT) -->
+            <div id="signup-pane" class="space-y-6 hidden transition-all duration-300">
+                <div class="space-y-1.5">
+                    <h3 class="text-xl font-extrabold text-white leading-tight">Create Workspace</h3>
+                    <p class="text-xs text-slate-400">Initialize a custom research container and isolate your work.</p>
+                </div>
+
+                <form id="signup-form" onsubmit="handleSignupSubmit(event)" class="space-y-4 pt-2">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Choose Username</label>
+                        <input type="text" id="signup-username" required
+                            class="w-full glass-input rounded-xl px-4 py-3 text-sm"
+                            placeholder="e.g. researcher123">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Security Password</label>
+                        <input type="password" id="signup-password" required
+                            class="w-full glass-input rounded-xl px-4 py-3 text-sm"
+                            placeholder="At least 4 characters">
+                    </div>
+
+                    <button type="submit" id="btn-signup-submit"
+                        class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-105 active:scale-[0.99] text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all mt-4 uppercase tracking-wider flex items-center justify-center gap-2">
+                        <span>Create Workspace</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Stunning Custom Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Client Scripts -->
+    <script>
+        // Switch Login/Signup Panel
+        function switchForm(type) {
+            const loginPane = document.getElementById('login-pane');
+            const signupPane = document.getElementById('signup-pane');
+            const indicator = document.getElementById('active-tab-indicator');
+            const btnLogin = document.getElementById('btn-tab-login');
+            const btnSignup = document.getElementById('btn-tab-signup');
+
+            if (type === 'login') {
+                indicator.style.left = '6px';
+                btnLogin.classList.remove('text-slate-400');
+                btnLogin.classList.add('text-white');
+                btnSignup.classList.remove('text-white');
+                btnSignup.classList.add('text-slate-400');
+
+                loginPane.classList.remove('hidden');
+                signupPane.classList.add('hidden');
+            } else {
+                indicator.style.left = 'calc(50%)';
+                btnLogin.classList.remove('text-white');
+                btnLogin.classList.add('text-slate-400');
+                btnSignup.classList.remove('text-slate-400');
+                btnSignup.classList.add('text-white');
+
+                loginPane.classList.add('hidden');
+                signupPane.classList.remove('hidden');
+            }
+        }
+
+        // Custom Toast System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `transform translate-y-4 opacity-0 transition-all duration-300 ease-out flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border pointer-events-auto max-w-sm text-xs font-semibold`;
+            
+            let bg, border, text, icon;
+            if (type === 'error') {
+                bg = 'bg-red-950/80';
+                border = 'border-red-500/20';
+                text = 'text-red-200';
+                icon = `<svg class="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+            } else if (type === 'success') {
+                bg = 'bg-emerald-950/80';
+                border = 'border-emerald-500/20';
+                text = 'text-emerald-200';
+                icon = `<svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+            } else {
+                bg = 'bg-slate-900/90';
+                border = 'border-blue-500/25';
+                text = 'text-blue-100';
+                icon = `<svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+            }
+
+            toast.className += ` ${bg} ${border} ${text}`;
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Trigger animation frame
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            });
+
+            // Dismiss timer
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Handle Login Submission
+        async function handleLoginSubmit(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('login-username');
+            const passwordInput = document.getElementById('login-password');
+            const btn = document.getElementById('btn-login-submit');
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            // Lock UI
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Authenticating...</span>`;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Welcome back to ScholarForge!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 800);
+                } else {
+                    showToast(data.error || 'Invalid username or password', 'error');
+                }
+            } catch (error) {
+                console.error('Login request failed:', error);
+                showToast('Server connection failed. Try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Sign In</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>`;
+            }
+        }
+
+        // Handle Signup Submission
+        async function handleSignupSubmit(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('signup-username');
+            const passwordInput = document.getElementById('signup-password');
+            const btn = document.getElementById('btn-signup-submit');
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password.length < 4) {
+                showToast('Password must be at least 4 characters long', 'error');
+                return;
+            }
+
+            // Lock UI
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Creating Workspace...</span>`;
+
+            try {
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Workspace initialized successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 800);
+                } else {
+                    showToast(data.error || 'Failed to initialize workspace', 'error');
+                }
+            } catch (error) {
+                console.error('Signup request failed:', error);
+                showToast('Server connection failed. Try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Create Workspace</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

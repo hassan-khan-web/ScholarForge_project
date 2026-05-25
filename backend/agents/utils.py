@@ -1,4 +1,5 @@
 import os
+# pyrefly: ignore [missing-import]
 import httpx
 import asyncio
 import random
@@ -6,19 +7,17 @@ from ..logging_config import setup_logging
 
 logger = setup_logging("scholarforge.agents")
 
-# Shared Models List
-# THE COUNCIL: 5 Unique, Checked & Verified Models.
 LEGION_MODELS = [
-    "google/gemini-2.0-flash-001",             # [0] Research Director (Primary/Stable)
-    "llama-3.3-70b-versatile",                 # [1] Reasoning Specialist (Deep Reasoning via Groq)
-    "nvidia/nemotron-3-nano-30b-a3b:free",     # [2] Efficiency Expert (Fast/Concise)
-    "llama-3.1-8b-instant",                    # [3] The Artisan (Creative Writer via Groq - Replaced Gemma due to Context Limits)
-    "llama-3.1-8b-instant"                     # [4] The Inquisitor (Fact Checker via Groq)
+    "openai/gpt-oss-120b",                     #Research Director
+    "llama-3.3-70b-versatile",                 #Reasoning Specialist
+    "openai/gpt-oss-20b",                      #Efficiency Expert
+    "llama-3.1-8b-instant",                    #The Artisan
+    "llama-3.1-8b-instant"                     #The Inquisitor
 ]
 
 async def call_model_async(model: str, system_prompt: str, user_prompt: str) -> str:
     """Helper to call OpenRouter or Groq async with retries"""
-    is_groq = model.startswith("llama-")
+    is_groq = model.startswith("llama-") or "openai/gpt-oss" in model
     
     if is_groq:
         api_key = os.environ.get("GROQ_API_KEY")

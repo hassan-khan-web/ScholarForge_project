@@ -13,7 +13,7 @@ async def agent_artisan(content: str, critique: str = "") -> str:
     prompt += (
         "1. Rephrase generic sentences to be more unique and academic.\n"
         "2. Ensure perfect flow and structure.\n"
-        "3. Keep all factual data/stats intact, but change the wording around them.\n"
+        "3. Keep all factual data/stats and preserve all inline citation brackets (e.g. [1], [2]) exactly as they are.\n"
         "4. Output ONLY the final polished markdown."
     )
     

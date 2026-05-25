@@ -3,8 +3,8 @@ node_modules
 .venv/
 venv/
 ROADMAP.txt
+Details-Exp/
 
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,7 +28,6 @@ test_model_connection.py
 *.egg
 MANIFEST
 
-# Coverage
 htmlcov/
 .tox/
 .nox/
@@ -43,10 +42,8 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Jupyter Notebook
 .ipynb_checkpoints
 
-# Environments
 .env
 .venv
 env/
@@ -55,15 +52,12 @@ ENV/
 env.bak/
 venv.bak/
 
-# IDEs
 .vscode/
 .idea/
 
-# OS
 .DS_Store
 Thumbs.db
 
-# Project Specific
 data/
 static/charts/
 celerybeat-schedule

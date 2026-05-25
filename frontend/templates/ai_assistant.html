@@ -20,7 +20,7 @@
 {% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/ai_assistant.css') }}?v=10">
+<link rel="stylesheet" href="{{ url_for('static', path='css/ai_assistant.css') }}?v=12">
 <div class="chat-page-container">
 
     <div id="welcome-state" class="welcome-overlay">
@@ -59,7 +59,7 @@
                         <div class="relative group custom-select-container z-40">
                             <button type="button" onclick="toggleChatModelSelect('model-select')"
                                 class="custom-select-trigger bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-muted)] text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--accent-primary)] hover:text-[var(--text-main)] transition-colors shadow-sm flex items-center gap-2">
-                                <span id="model-select-trigger-text">nvidia/Nemotron</span>
+                                <span id="model-select-trigger-text">OpenAI GPT OSS</span>
                                 <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -69,32 +69,17 @@
 
                             <div id="model-select-options" class="custom-select-options min-w-[160px]">
                                 <div class="custom-option selected" data-value="default"
-                                    onclick="selectCustomOption('default', 'nvidia/Nemotron', 'model-select')">
-                                    <span>nvidia/Nemotron</span>
+                                    onclick="selectCustomOption('default', 'OpenAI GPT OSS', 'model-select')">
+                                    <span>OpenAI GPT OSS</span>
                                 </div>
-                                <div class="custom-option" data-value="qwen-80b"
-                                    onclick="selectCustomOption('qwen-80b', 'Qwen 2.5 72B', 'model-select')">
-                                    <span>Qwen 2.5 72B</span>
+                                <div class="custom-option" data-value="GLM 4.5"
+                                    onclick="selectCustomOption('GLM 4.5', 'GLM 4.5', 'model-select')">
+                                    <span>GLM 4.5</span>
                                 </div>
-                                <div class="custom-option" data-value="mistral"
-                                    onclick="selectCustomOption('mistral', 'Mistral Small', 'model-select')">
-                                    <span>Mistral Small</span>
-                                </div>
-                                <div class="custom-option" data-value="gemini"
-                                    onclick="selectCustomOption('gemini', 'Gemini 2.0 Flash', 'model-select')">
-                                    <span>Gemini 2.0 Flash</span>
-                                </div>
-                                <div class="custom-option" data-value="gpt-oss"
-                                    onclick="selectCustomOption('gpt-oss', 'GPT-4o (OSS)', 'model-select')">
-                                    <span>GPT-4o (OSS)</span>
-                                </div>
-                                <div class="custom-option" data-value="gemma"
-                                    onclick="selectCustomOption('gemma', 'Gemma 2 27B', 'model-select')">
-                                    <span>Gemma 2 27B</span>
-                                </div>
-                                <div class="custom-option" data-value="deepseek"
-                                    onclick="selectCustomOption('deepseek', 'DeepSeek R1', 'model-select')">
-                                    <span>DeepSeek R1</span>
+
+                                <div class="custom-option" data-value="Nemotron 3 Nano"
+                                    onclick="selectCustomOption('Nemotron 3 Nano', 'Nemotron 3 Nano', 'model-select')">
+                                    <span>Nemotron 3 Nano</span>
                                 </div>
                             </div>
                         </div>
@@ -125,10 +110,11 @@
                         </button>
                         <input type="file" id="file-upload" multiple class="hidden" accept=".pdf,.docx,.txt,.md">
 
-                        <input type="text" id="chat-input"
-                            class="flex-1 bg-transparent border-none text-[var(--text-main)] placeholder-[var(--text-muted)] py-2 focus:ring-0 focus:outline-none text-sm"
+                        <textarea id="chat-input"
+                            class="flex-1 bg-transparent border-none text-[var(--text-main)] placeholder-[var(--text-muted)] py-2 focus:ring-0 focus:outline-none text-sm resize-none custom-scrollbar"
                             placeholder="Ask a question..." autocomplete="off"
-                            style="outline: none !important; box-shadow: none !important;">
+                            rows="1"
+                            style="outline: none !important; box-shadow: none !important; max-height: 120px; overflow-y: hidden; line-height: 1.5; height: 36px; padding-top: 8px; padding-bottom: 8px;"></textarea>
 
                         <button type="button" id="mic-btn" onclick="toggleRecording()"
                             class="p-2 text-[var(--text-muted)] hover:text-red-500 transition-colors rounded-lg hover:bg-[var(--hover-bg)]"
@@ -172,5 +158,5 @@
         }
     })();
 </script>
-<script src="{{ url_for('static', path='js/ai_assistant.js') }}?v=25"></script>
+<script src="{{ url_for('static', path='js/ai_assistant.js') }}?v=28"></script>
 {% endblock %}

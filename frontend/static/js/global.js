@@ -29,7 +29,14 @@
     };
     window.closeAllDropdowns = function () { document.querySelectorAll('.dropdown-menu.show').forEach(d => d.classList.remove('show')); };
 
-    window.toggleHistory = function () { const p = byId('history-panel'); if (!p) return; p.classList.toggle('-translate-x-full'); };
+    window.toggleHistory = function () {
+        const p = byId('history-panel');
+        if (!p) return;
+        p.classList.toggle('-translate-x-full');
+        if (!p.classList.contains('-translate-x-full')) {
+            if (typeof window.loadHistory === 'function') window.loadHistory();
+        }
+    };
 
     window.toggleHookPanel = function () { const p = byId('hook-panel'); if (!p) return; if (p.style.transform === 'translateX(0%)') { p.style.transform = 'translateX(100%)'; } else { p.style.transform = 'translateX(0%)'; if (window.fetchHooks) window.fetchHooks(); } };
 
@@ -42,15 +49,36 @@
 
     let toastTimer = null;
     window.showToast = function (msg, timeout = 2500) {
-        console.log('Toast suppressed:', msg);
+        const toastEl = byId('toast-notification');
+        if (!toastEl) return;
+        
+        clearTimeout(toastTimer);
+        toastEl.textContent = msg;
+        toastEl.classList.remove('hidden');
+        toastEl.classList.add('show');
+        
+        toastTimer = setTimeout(() => {
+            toastEl.classList.remove('show');
+            setTimeout(() => {
+                toastEl.classList.add('hidden');
+            }, 300);
+        }, timeout);
     };
-    window.hideToast = function () { };
+    window.hideToast = function () {
+        const toastEl = byId('toast-notification');
+        if (toastEl) {
+            clearTimeout(toastTimer);
+            toastEl.classList.remove('show');
+            toastEl.classList.add('hidden');
+        }
+    };
 
     let currentFolders = [];
 
     document.addEventListener('DOMContentLoaded', () => {
         initTheme();
         fetchFolders();
+        if (typeof window.loadHistory === 'function') window.loadHistory();
 
         // Attach confirm modal event listeners
         byId('btn-cancel-confirm')?.addEventListener('click', () => {
@@ -347,11 +375,25 @@
     // ============================================
 
     let currentMergeReportId = null;
+    let currentMergeTab = 'preview';
 
     window.openMergePanel = function () {
         showModal('merge-panel');
         loadMergeReports();
         loadMergeHooks();
+        currentMergeReportId = null;
+        
+        // Show empty state, hide content area
+        const emptyState = byId('merge-empty-state');
+        const contentArea = byId('merge-content-area');
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+        }
+        if (contentArea) {
+            contentArea.classList.add('hidden');
+            contentArea.classList.remove('flex');
+        }
     };
 
     window.closeMergePanel = function () {
@@ -359,6 +401,138 @@
         currentMergeReportId = null;
         byId('merge-report-content').value = '';
         byId('merge-report-title').textContent = '';
+        byId('merge-report-preview').innerHTML = '';
+    };
+
+    window.setMergeTab = function (tab) {
+        currentMergeTab = tab;
+        const btnPreview = byId('merge-tab-preview');
+        const btnEdit = byId('merge-tab-edit');
+        const previewContainer = byId('merge-report-preview-container');
+        const editContainer = byId('merge-report-edit-container');
+        const indicator = byId('merge-tab-indicator');
+
+        if (!btnPreview || !btnEdit || !previewContainer || !editContainer) return;
+
+        // Clean up any remaining background classes from the buttons
+        btnPreview.classList.remove('bg-[var(--accent-primary)]');
+        btnEdit.classList.remove('bg-[var(--accent-primary)]');
+
+        if (tab === 'preview') {
+            if (indicator) {
+                indicator.style.left = '0.125rem';
+                indicator.style.width = ''; // Let CSS w-[calc(50%-2px)] determine width
+            }
+            btnPreview.classList.add('text-white');
+            btnPreview.classList.remove('text-[var(--text-muted)]', 'hover:text-[var(--text-main)]');
+            btnEdit.classList.add('text-[var(--text-muted)]');
+            btnEdit.classList.remove('text-white');
+            
+            previewContainer.classList.remove('hidden');
+            editContainer.classList.add('hidden');
+            
+            // Render the text from textarea into preview
+            const content = byId('merge-report-content').value;
+            renderMergePreview(content);
+        } else {
+            if (indicator) {
+                indicator.style.left = '50%';
+                indicator.style.width = ''; // Let CSS w-[calc(50%-2px)] determine width
+            }
+            btnPreview.classList.remove('text-white');
+            btnPreview.classList.add('text-[var(--text-muted)]', 'hover:text-[var(--text-main)]');
+            btnEdit.classList.add('text-white');
+            btnEdit.classList.remove('text-[var(--text-muted)]');
+            
+            editContainer.classList.remove('hidden');
+            previewContainer.classList.add('hidden');
+        }
+    };
+
+    function renderMergePreview(markdownText, highlightOriginal = null) {
+        const previewEl = byId('merge-report-preview');
+        if (!previewEl) return;
+        
+        let htmlContent = '';
+        
+        // If we have an original content to diff against, calculate highlights!
+        let processedText = markdownText;
+        if (highlightOriginal) {
+            processedText = diffTexts(highlightOriginal, markdownText);
+        }
+        
+        if (typeof marked !== 'undefined') {
+            htmlContent = marked.parse(processedText || '*No content*');
+        } else {
+            // Fallback
+            htmlContent = (processedText || '*No content*')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n\n/g, '<br><br>');
+        }
+        
+        previewEl.innerHTML = htmlContent;
+    }
+
+    function diffTexts(original, modified) {
+        const origLines = original.split('\n').map(l => l.trim()).filter(Boolean);
+        const modLines = modified.split('\n');
+        
+        const markedLines = modLines.map(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return line;
+            
+            // Check if the trimmed line is present in the original report lines
+            const exists = origLines.some(orig => orig.includes(trimmed) || trimmed.includes(orig));
+            if (!exists) {
+                // If it's a heading
+                if (trimmed.startsWith('#')) {
+                    return line + ' <span class="diff-inserted text-xs bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded ml-2 font-normal">New Section</span>';
+                }
+                return `<ins class="diff-inserted bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200 px-1 rounded block my-1 border-l-4 border-green-500 pl-2">${line}</ins>`;
+            }
+            return line;
+        });
+        
+        return markedLines.join('\n');
+    }
+
+    window.handleReportFileUpload = async function (event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showToast('Uploading and parsing report...');
+        
+        try {
+            const res = await fetch('/api/report/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to upload report');
+            }
+
+            const data = await res.json();
+            showToast('Report uploaded successfully!');
+            
+            // Reload report list
+            await loadMergeReports();
+            
+            // Auto select the new report
+            selectMergeReport(data.report.id, data.report.topic);
+        } catch (e) {
+            console.error('Upload error:', e);
+            showToast(e.message || 'Error uploading file');
+        } finally {
+            event.target.value = ''; // Reset file input
+        }
     };
 
     async function loadMergeReports() {
@@ -382,7 +556,7 @@
             }
 
             container.innerHTML = reports.map(report => `
-                <button onclick="selectMergeReport(${report.id}, '${escapeAttr(report.topic)}')" 
+                <button onclick="selectMergeReport(${report.id}, '${escapeAttr(report.topic)}', this)" 
                     class="merge-report-item w-full text-left p-2 rounded-lg text-xs hover:bg-[var(--hover-bg)] transition-colors truncate ${currentMergeReportId === report.id ? 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]' : 'text-[var(--text-main)]'}"
                     title="${escapeAttr(report.topic)}">
                     ${escapeHtml(report.topic)}
@@ -394,32 +568,59 @@
         }
     }
 
-    window.selectMergeReport = async function (id, topic) {
+    window.selectMergeReport = async function (id, topic, element = null) {
         currentMergeReportId = id;
         byId('merge-report-title').textContent = topic;
+        byId('merge-report-title').setAttribute('title', topic);
 
         // Highlight selected report
         document.querySelectorAll('.merge-report-item').forEach(el => {
             el.classList.remove('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]');
             el.classList.add('text-[var(--text-main)]');
         });
-        const selectedBtn = document.querySelector(`.merge-report-item[onclick*="selectMergeReport(${id}"]`);
+        
+        let selectedBtn = element;
+        if (!selectedBtn) {
+            selectedBtn = Array.from(document.querySelectorAll('.merge-report-item')).find(btn => {
+                const clickAttr = btn.getAttribute('onclick') || '';
+                return clickAttr.includes(`selectMergeReport(${id},`) || clickAttr.includes(`selectMergeReport(${id})`);
+            });
+        }
         if (selectedBtn) {
             selectedBtn.classList.add('bg-[var(--accent-primary)]/10', 'text-[var(--accent-primary)]');
             selectedBtn.classList.remove('text-[var(--text-main)]');
         }
 
+        // Show content area, hide empty state
+        const emptyState = byId('merge-empty-state');
+        const contentArea = byId('merge-content-area');
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+        }
+        if (contentArea) {
+            contentArea.classList.remove('hidden');
+            contentArea.classList.add('flex');
+        }
+
+        // Reset to preview tab
+        setMergeTab('preview');
+
         // Load report content
-        const contentArea = byId('merge-report-content');
-        contentArea.value = 'Loading...';
+        const textArea = byId('merge-report-content');
+        const previewEl = byId('merge-report-preview');
+        textArea.value = 'Loading...';
+        previewEl.innerHTML = '<div class="text-xs text-[var(--text-muted)]">Loading content...</div>';
 
         try {
             const res = await fetch(`/api/report/${id}`);
             const data = await res.json();
-            contentArea.value = data.content || '';
+            textArea.value = data.content || '';
+            renderMergePreview(data.content || '');
         } catch (e) {
             console.error('Failed to load report content', e);
-            contentArea.value = 'Failed to load report content';
+            textArea.value = 'Failed to load report content';
+            previewEl.textContent = 'Failed to load report content';
         }
     };
 
@@ -508,6 +709,21 @@
 
         // Show loading state
         const originalContent = contentArea.value;
+        
+        // Show loading in preview too
+        const previewEl = byId('merge-report-preview');
+        if (previewEl) {
+            previewEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                    <svg class="animate-spin h-8 w-8 text-[var(--accent-primary)]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-xs text-[var(--text-muted)] font-bold">AI is intelligently merging the hook into your report...</p>
+                </div>
+            `;
+        }
+        
         contentArea.value = 'AI is merging the hook into your report...';
         contentArea.disabled = true;
 
@@ -525,17 +741,188 @@
 
             if (data.status === 'success' && data.merged_content) {
                 contentArea.value = data.merged_content;
+                
+                // Force switch to Preview tab to show the structure
+                setMergeTab('preview');
+                
+                // Render the preview with highlighted diffs!
+                renderMergePreview(data.merged_content, originalContent);
+                
                 showToast('Hook merged successfully! Don\'t forget to save.');
+                
+                // Smooth scroll to the first inserted diff element and trigger pulse animation
+                setTimeout(() => {
+                    const firstInsert = document.querySelector('.diff-inserted');
+                    if (firstInsert) {
+                        firstInsert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstInsert.classList.add('animate-pulse');
+                        setTimeout(() => {
+                            firstInsert.classList.remove('animate-pulse');
+                        }, 4000);
+                    }
+                }, 150);
             } else {
                 contentArea.value = originalContent;
+                renderMergePreview(originalContent);
                 showToast(data.error || 'Failed to merge hook');
             }
         } catch (e) {
             console.error('Smart push error:', e);
             contentArea.value = originalContent;
+            renderMergePreview(originalContent);
             showToast('Error merging hook');
         } finally {
             contentArea.disabled = false;
+        }
+    };
+
+    // --- REPORT HISTORY PANEL MANAGEMENT ---
+    window.loadHistory = function () {
+        const container = document.getElementById('history-list-content');
+        if (!container) return;
+
+        container.innerHTML = '<div class="text-xs text-[var(--text-muted)] p-2">Loading...</div>';
+
+        fetch('/api/history')
+            .then(r => r.json())
+            .then(data => {
+                container.innerHTML = '';
+
+                // Update workspace telemetry dynamically
+                const reportsCount = data.length;
+                const reportsEl = document.getElementById('telemetry-reports');
+                const timeSavedEl = document.getElementById('telemetry-time-saved');
+                const pagesEl = document.getElementById('telemetry-pages-generated');
+                const chunksEl = document.getElementById('telemetry-rag-chunks');
+                
+                if (reportsEl) reportsEl.textContent = reportsCount;
+                if (timeSavedEl) {
+                    const hours = reportsCount * 3;
+                    timeSavedEl.innerHTML = `${hours} <span class="text-[10px] font-normal text-white">h</span>`;
+                }
+                if (pagesEl) pagesEl.textContent = reportsCount * 8;
+                if (chunksEl) {
+                    const chunks = reportsCount > 0 ? reportsCount * 250 : 0;
+                    chunksEl.textContent = chunks >= 1000 ? `${(chunks / 1000).toFixed(1)}k` : chunks;
+                }
+
+                if (reportsCount === 0) {
+                    container.innerHTML = '<div class="text-xs text-[var(--text-muted)] p-4 text-center">No reports generated yet.</div>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-[var(--hover-bg)] cursor-pointer border-b border-[var(--border-color)] group transition-colors flex items-start gap-3';
+                    div.innerHTML = `
+                        <div class="pt-0.5 shrink-0" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="report-checkbox w-4 h-4 rounded border-gray-450 dark:border-gray-600 bg-transparent text-blue-600 focus:ring-blue-500 transition-all cursor-pointer" data-id="${item.id}">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="text-xs font-bold text-[var(--text-main)] line-clamp-2 group-hover:text-blue-500 transition-colors">${escapeHtml(item.topic)}</h4>
+                            </div>
+                            <div class="flex justify-between items-center text-[10px] text-[var(--text-muted)]">
+                                <span>${item.date}</span>
+                                <button onclick="showReportOptions(event, ${item.id}, '${escapeAttr(item.topic)}')" class="p-0.5 hover:bg-[var(--hover-bg)] rounded opacity-0 group-hover:opacity-100 transition-opacity" title="Options">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    div.onclick = (e) => {
+                        if (!e.target.closest('button') && !e.target.closest('input[type="checkbox"]')) {
+                            window.viewReport(item.id);
+                        }
+                    };
+                    container.appendChild(div);
+                });
+            })
+            .catch(e => {
+                console.error(e);
+                container.innerHTML = '<div class="text-xs text-red-400 p-2">Failed to load history</div>';
+            });
+    };
+
+    window.viewReport = window.viewReport || function (id) {
+        if (window.innerWidth < 768) toggleHistory();
+        window.location.href = '/?report_id=' + id;
+    };
+
+    window.showReportOptions = function (e, id, topic) {
+        e.stopPropagation();
+        if (window.showContextMenu) {
+            window.showContextMenu(e.clientX, e.clientY, [
+                { label: 'View', action: () => window.viewReport(id) },
+                { label: 'Delete', action: () => window.deleteReport(null, id) }
+            ]);
+        }
+    };
+
+    window.deleteReport = function (e, id) {
+        if (e) e.stopPropagation();
+        showConfirm('Delete Report', 'Permanently delete this report?', () => {
+            fetch('/api/report/' + id, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        showToast('Report deleted');
+                        window.loadHistory();
+                    } else {
+                        showToast('Error deleting report');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Error deleting report');
+                });
+        });
+    };
+
+    window.selectAllReports = function () {
+        const checkboxes = document.querySelectorAll('.report-checkbox');
+        if (checkboxes.length === 0) return;
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        showToast(allChecked ? 'Deselected all reports' : 'Selected all reports');
+    };
+
+    window.deleteSelectedReports = function () {
+        const checkboxes = document.querySelectorAll('.report-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
+
+        if (ids.length > 0) {
+            showConfirm('Delete Reports', `Permanently delete the ${ids.length} selected report(s)?`, () => {
+                const promises = ids.map(id => 
+                    fetch('/api/report/' + id, { method: 'DELETE' }).then(r => r.json())
+                );
+                Promise.all(promises)
+                    .then(() => {
+                        showToast('Selected reports deleted');
+                        window.loadHistory();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Error deleting selected reports');
+                    });
+            });
+        } else {
+            showConfirm('Delete All Reports', 'Permanently delete all reports in history?', () => {
+                fetch('/api/reports/all', { method: 'DELETE' })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.status === 'success') {
+                            showToast('All reports deleted');
+                            window.loadHistory();
+                        } else {
+                            showToast('Error deleting all reports');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        showToast('Error deleting all reports');
+                    });
+            });
         }
     };
 
@@ -561,6 +948,77 @@
             hideModal('merge-panel');
             hideModal('confirm-modal');
         }
+    });
+
+    // ============================================================================
+    // ============================================================================
+    // FRONT-END AUTHENTICATION ORCHESTRATOR & INTERCEPTOR
+    // ============================================================================
+    
+    // Global Fetch Interceptor to handle 401 Unauthorized API responses
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        try {
+            const response = await originalFetch(...args);
+            if (response.status === 401) {
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
+            }
+            return response;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    window.checkAuthStatus = async function() {
+        try {
+            const res = await fetch('/api/auth/me');
+            const data = await res.json();
+            if (data.authenticated) {
+                // Show initials avatar
+                const initials = data.username.substring(0, 2).toUpperCase();
+                const avatar = byId('user-avatar-initials');
+                if (avatar) {
+                    avatar.textContent = initials;
+                    avatar.classList.remove('animate-pulse');
+                }
+                const display = byId('user-username-display');
+                if (display) display.textContent = data.username;
+                
+                // Fetch folders & reports
+                fetchFolders();
+                if (typeof window.loadHistory === 'function') window.loadHistory();
+            } else {
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
+            }
+        } catch (e) {
+            console.error('Auth check failed:', e);
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
+    };
+
+    window.submitLogout = async function() {
+        try {
+            const res = await fetch('/api/auth/logout', { method: 'POST' });
+            if (res.status === 200) {
+                showToast('Logged out successfully');
+                localStorage.removeItem('currentChatSessionId');
+                window.location.href = '/login';
+            }
+        } catch (e) {
+            console.error('Logout error:', e);
+            showToast('Logout failed');
+        }
+    };
+
+    // Run auth check on initialization
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAuthStatus();
     });
 
 })();

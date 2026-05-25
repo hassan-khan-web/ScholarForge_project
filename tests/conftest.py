@@ -20,6 +20,7 @@ test_db_fd, test_db_path = tempfile.mkstemp(suffix=".db")
 os.close(test_db_fd)
 os.environ["DATABASE_URL"] = f"sqlite:///{test_db_path}"
 os.environ["APP_SECRET_KEY"] = "test-secret-key"
+os.environ["SCHOLARFORGE_TESTING"] = "1"
 os.environ.setdefault("OPENROUTER_API_KEY", "test-key")
 os.environ.setdefault("SERP_KEY", "test-key")
 os.environ.setdefault("CELERY_BROKER_URL", "redis://redis:6379/0")
@@ -73,6 +74,18 @@ def test_db(monkeypatch):
     )
     test_session = TestSessionLocal()
     
+    # Pre-seed the test user to guarantee it has id=1
+    from backend.database import UserDB
+    test_user = test_session.query(UserDB).filter(UserDB.id == 1).first()
+    if not test_user:
+        test_user = UserDB(id=1, username="test_user", password_hash="dummy_hash")
+        test_session.add(test_user)
+        test_session.commit()
+    
+    # Prevent the session from being closed prematurely during test requests
+    original_close = test_session.close
+    test_session.close = lambda: None
+
     # Replace the module-level SessionLocal with our test session factory
     # This ensures all database operations use the test session
     old_sessionlocal_call = database.SessionLocal
@@ -91,6 +104,7 @@ def test_db(monkeypatch):
     
     # Cleanup - restore original and rollback
     database.SessionLocal = old_sessionlocal_call
+    test_session.close = original_close
     test_session.close()
     transaction.rollback()
     connection.close()
@@ -120,7 +134,7 @@ def client(test_db):
 @pytest.fixture
 def sample_folder(test_db):
     """Create a sample project folder."""
-    folder = ProjectFolder(name="Test Folder")
+    folder = ProjectFolder(name="Test Folder", user_id=1)
     test_db.add(folder)
     test_db.commit()
     test_db.refresh(folder)
@@ -155,7 +169,8 @@ def sample_report(test_db):
     """Create a sample report."""
     report = ReportDB(
         topic="Test Report",
-        content="# Test Report\n\nThis is a test report."
+        content="# Test Report\n\nThis is a test report.",
+        user_id=1
     )
     test_db.add(report)
     test_db.commit()
@@ -166,7 +181,7 @@ def sample_report(test_db):
 @pytest.fixture
 def sample_hook(test_db):
     """Create a sample hook."""
-    hook = Hook(content="This is a test hook with important research notes.")
+    hook = Hook(content="This is a test hook with important research notes.", user_id=1)
     test_db.add(hook)
     test_db.commit()
     test_db.refresh(hook)

@@ -23,32 +23,65 @@
             class="w-full max-w-6xl bg-[var(--bg-panel)] rounded-2xl shadow-2xl border border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row min-h-[600px]">
 
             <div
-                class="w-full md:w-1/3 bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex flex-col justify-between text-white relative overflow-hidden">
+                class="w-full md:w-1/3 bg-gradient-to-br from-blue-700 to-indigo-900 p-8 flex flex-col justify-between text-white relative overflow-hidden">
                 <div class="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-white opacity-5 blur-3xl"></div>
 
                 <div class="relative z-10">
-                    <div class="flex items-center gap-2 mb-4">
+                    <div class="flex items-center gap-2 mb-2">
                         <h1 class="text-3xl font-bold tracking-tight">ScholarForge</h1>
                     </div>
+                    <p class="text-[10px] text-blue-200/80 uppercase tracking-widest font-semibold mb-6">Research Workspace Hub</p>
 
-                    <div class="space-y-2 mt-4">
-                        <div
-                            class="flex items-center gap-2 text-[10px] font-medium text-blue-50 bg-blue-800/30 p-1.5 rounded-lg border border-blue-500/30 w-fit">
-                            <span
-                                class="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
-                            <span>System Online</span>
+                    <!-- Telemetry Dashboard -->
+                    <div class="space-y-4">
+                        <label class="text-[9px] font-bold text-blue-300 uppercase tracking-wider block opacity-70">Workspace Telemetry</label>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 backdrop-blur-sm">
+                                <span class="text-[10px] text-blue-200 block">Reports</span>
+                                <span class="text-2xl font-bold tracking-tight text-white block mt-0.5" id="telemetry-reports">0</span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 backdrop-blur-sm">
+                                <span class="text-[10px] text-blue-200 block">Time Saved</span>
+                                <span class="text-2xl font-bold tracking-tight text-green-300 block mt-0.5" id="telemetry-time-saved">0 <span class="text-[10px] font-normal text-white">h</span></span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 backdrop-blur-sm">
+                                <span class="text-[10px] text-blue-200 block">Pages Generated</span>
+                                <span class="text-2xl font-bold tracking-tight text-white block mt-0.5" id="telemetry-pages-generated">0</span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 backdrop-blur-sm">
+                                <span class="text-[10px] text-blue-200 block">RAG Chunks</span>
+                                <span class="text-2xl font-bold tracking-tight text-indigo-200 block mt-0.5" id="telemetry-rag-chunks">0</span>
+                            </div>
                         </div>
-                        <div
-                            class="flex items-center gap-2 text-[10px] font-medium text-blue-50 bg-blue-800/30 p-1.5 rounded-lg border border-blue-500/30 w-fit">
-                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                            <span>Model: Hybrid</span>
+
+                        <!-- System Dials -->
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2 backdrop-blur-sm">
+                            <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-blue-200">System Accuracy</span>
+                                <span class="font-bold text-green-300">98.4%</span>
+                            </div>
+                            <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-400 to-green-300" style="width: 98.4%"></div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-blue-200">API Gateway</span>
+                                <span class="font-bold text-blue-300">Active</span>
+                            </div>
+                            <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-400 to-indigo-400" style="width: 100%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="relative z-10 text-[10px] text-blue-200/80 border-t border-white/10 pt-4">
-                    <p class="uppercase tracking-widest font-bold mb-1 opacity-70">New Features</p>
-                    <p>Recurring research & multi-PDF synthesis enabled.</p>
+                <div class="relative z-10 text-[10px] text-blue-200/80 border-t border-white/10 pt-4 mt-6">
+                    <p class="uppercase tracking-widest font-bold mb-1 opacity-70">Research Agent Status</p>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping"></span>
+                        <span>Multi-agent council pipeline active & listening.</span>
+                    </div>
                 </div>
             </div>
 
@@ -65,7 +98,43 @@
                             placeholder="e.g. Impact of AI on Global Economics..." required autocomplete="off">
                     </div>
 
-                    <div class="grid grid-cols-2 gap-5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="space-y-1">
+                            <label
+                                class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">AI Model</label>
+                            <div class="relative group">
+                                <input type="hidden" id="model-select" name="model" value="llama-3.3-70b-versatile">
+                                <div
+                                    class="border border-[var(--border-color)] rounded-lg p-0.5 bg-[var(--bg-main)] flex flex-col gap-1">
+                                    <button type="button" onclick="toggleCustomSelect('model-select')"
+                                        class="w-full flex justify-between items-center p-2.5 text-xs font-medium text-[var(--text-main)] hover:bg-[var(--hover-bg)] rounded-md transition-colors text-left">
+                                        <span id="model-select-trigger-text">Llama 3.3 70B (Groq)</span>
+                                        <svg class="w-3.5 h-3.5 text-[var(--text-muted)]" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </button>
+
+                                    <div id="model-select-options"
+                                        class="hidden absolute top-full left-0 right-0 mt-1 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-lg shadow-xl z-20 overflow-hidden p-1 min-w-[220px]">
+                                        <div class="p-1.5 hover:bg-[var(--hover-bg)] rounded-md cursor-pointer text-xs font-medium text-[var(--text-main)]"
+                                            onclick="selectCustomOption('llama-3.3-70b-versatile', 'Llama 3.3 70B (Groq)', 'model-select')">
+                                            Llama 3.3 70B (Groq, Default)</div>
+                                        <div class="p-1.5 hover:bg-[var(--hover-bg)] rounded-md cursor-pointer text-xs font-medium text-[var(--text-main)]"
+                                            onclick="selectCustomOption('zai-org/GLM-5.1', 'GLM 5.1 (Hugging Face)', 'model-select')">
+                                            GLM 5.1 (Hugging Face)</div>
+                                        <div class="p-1.5 hover:bg-[var(--hover-bg)] rounded-md cursor-pointer text-xs font-medium text-[var(--text-main)]"
+                                            onclick="selectCustomOption('Qwen/Qwen3-0.6B', 'Qwen3 0.6B (Hugging Face)', 'model-select')">
+                                            Qwen3 0.6B (Hugging Face)</div>
+                                        <div class="p-1.5 hover:bg-[var(--hover-bg)] rounded-md cursor-pointer text-xs font-medium text-[var(--text-main)]"
+                                            onclick="selectCustomOption('meta-llama/Llama-3.1-8B-Instruct', 'Llama 3.1 8B (Hugging Face)', 'model-select')">
+                                            Llama 3.1 8B (Hugging Face)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="space-y-1">
                             <label
                                 class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Output
@@ -220,143 +289,112 @@
         </div>
     </main>
 
-    <link rel="stylesheet" href="{{ url_for('static', path='css/council.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/council.css') }}?v=12">
 
     <div id="progress-section"
         class="hidden absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 z-20 bg-[var(--bg-main)]">
 
-        <div id="standard-progress" class="w-full max-w-lg p-8">
-            <h2 class="text-2xl font-bold text-center mb-8 text-[var(--text-main)]">Generating Research</h2>
+        <div id="standard-progress" class="w-full max-w-md p-8">
+            <h2 id="std-progress-title" class="text-2xl font-bold text-center mb-6 text-[var(--text-main)]">
+                Generating your report…
+            </h2>
 
-            <div class="relative space-y-8">
-                <div class="absolute left-6 top-4 bottom-4 w-0.5 bg-[var(--border-color)]">
-                    <div id="progress-line-fill"
-                        class="w-full bg-blue-600 transition-all duration-[3000ms] ease-linear h-0"></div>
+            <!-- Horizontal Progress Bar -->
+            <div class="w-full h-2 rounded-full bg-[var(--border-color)] mb-8 overflow-hidden">
+                <div id="std-progress-bar"
+                    class="h-full rounded-full transition-all duration-[2000ms] ease-out"
+                    style="width: 5%; background: linear-gradient(90deg, #06b6d4, #3b82f6);"></div>
+            </div>
+
+            <!-- Checklist Steps -->
+            <div class="space-y-4">
+                <div id="std-step-1" class="flex items-center gap-3 text-sm text-[var(--text-muted)] transition-all duration-300">
+                    <div id="std-icon-1" class="std-step-icon w-5 h-5 flex-shrink-0 rounded-full border-2 border-[var(--border-color)] flex items-center justify-center">
+                    </div>
+                    <span id="std-label-1">Analyzing topic & gathering sources</span>
                 </div>
-
-                <div id="step-1" class="relative flex items-center gap-4 opacity-50 transition-all duration-300">
-                    <div
-                        class="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--bg-panel)] border-2 border-[var(--border-color)] z-10 transition-colors duration-300">
-                        <svg class="w-6 h-6 text-[var(--text-muted)]" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
+                <div id="std-step-2" class="flex items-center gap-3 text-sm text-[var(--text-muted)] transition-all duration-300">
+                    <div id="std-icon-2" class="std-step-icon w-5 h-5 flex-shrink-0 rounded-full border-2 border-[var(--border-color)] flex items-center justify-center">
                     </div>
-                    <div>
-                        <h3 class="font-bold text-[var(--text-main)]">Analyzing Topic</h3>
-                        <p class="text-xs text-[var(--text-muted)]" id="step-1-text">Processing search vectors...</p>
-                    </div>
+                    <span id="std-label-2">Planning report structure</span>
                 </div>
-
-                <div id="step-2" class="relative flex items-center gap-4 opacity-50 transition-all duration-300">
-                    <div
-                        class="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--bg-panel)] border-2 border-[var(--border-color)] z-10 transition-colors duration-300">
-                        <svg class="w-6 h-6 text-[var(--text-muted)]" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.553-.894L15 7m0 13V7">
-                            </path>
-                        </svg>
+                <div id="std-step-3" class="flex items-center gap-3 text-sm text-[var(--text-muted)] transition-all duration-300">
+                    <div id="std-icon-3" class="std-step-icon w-5 h-5 flex-shrink-0 rounded-full border-2 border-[var(--border-color)] flex items-center justify-center">
                     </div>
-                    <div>
-                        <h3 class="font-bold text-[var(--text-main)]">Research Planning</h3>
-                        <p class="text-xs text-[var(--text-muted)]" id="step-2-text">Structuring gathered data...</p>
-                    </div>
+                    <span id="std-label-3">Drafting content</span>
                 </div>
-
-                <div id="step-3" class="relative flex items-center gap-4 opacity-50 transition-all duration-300">
-                    <div
-                        class="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--bg-panel)] border-2 border-[var(--border-color)] z-10 transition-colors duration-300">
-                        <svg class="w-6 h-6 text-[var(--text-muted)]" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
-                            </path>
-                        </svg>
+                <div id="std-step-4" class="flex items-center gap-3 text-sm text-[var(--text-muted)] transition-all duration-300">
+                    <div id="std-icon-4" class="std-step-icon w-5 h-5 flex-shrink-0 rounded-full border-2 border-[var(--border-color)] flex items-center justify-center">
                     </div>
-                    <div>
-                        <h3 class="font-bold text-[var(--text-main)]">Drafting Content</h3>
-                        <p class="text-xs text-[var(--text-muted)]" id="step-3-text">Synthesizing comprehensive
-                            report...</p>
-                    </div>
+                    <span id="std-label-4">Finalizing your report</span>
                 </div>
-
-                <div id="step-4" class="relative flex items-center gap-4 opacity-50 transition-all duration-300">
-                    <div
-                        class="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--bg-panel)] border-2 border-[var(--border-color)] z-10 transition-colors duration-300">
-                        <svg class="w-6 h-6 text-[var(--text-muted)]" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-[var(--text-main)]">Finalizing</h3>
-                        <p class="text-xs text-[var(--text-muted)]" id="step-4-text">Formatting output...</p>
-                    </div>
-                </div>
-
             </div>
         </div>
 
         <!-- Council Circular Animation -->
-        <div id="council-animation-container" class="hidden">
-            <svg class="council-connections">
-                <line x1="50%" y1="12%" x2="50%" y2="50%" class="connection-line" id="conn-planner"></line>
-                <line x1="88%" y1="50%" x2="50%" y2="50%" class="connection-line" id="conn-researcher"></line>
-                <line x1="50%" y1="88%" x2="50%" y2="50%" class="connection-line" id="conn-writer"></line>
-                <line x1="12%" y1="50%" x2="50%" y2="50%" class="connection-line" id="conn-reviewer"></line>
-            </svg>
-
-            <!-- Data Particle -->
-            <div id="council-particle" class="data-particle"></div>
-
-            <!-- Agent Nodes -->
-            <div id="agent-planner" class="agent-node">
-                <svg class="agent-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
-                    </path>
-                </svg>
-                <span class="agent-label">Planner</span>
-            </div>
-            <div id="agent-researcher" class="agent-node">
-                <svg class="agent-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-                <span class="agent-label">Researcher</span>
-            </div>
-            <div id="agent-writer" class="agent-node">
-                <svg class="agent-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
-                    </path>
-                </svg>
-                <span class="agent-label">Writer</span>
-            </div>
-            <div id="agent-reviewer" class="agent-node">
-                <svg class="agent-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span class="agent-label">Reviewer</span>
+        <!-- Council Loading - Premium Pipeline Design -->
+        <!-- Council Loading - Premium Pipeline Design -->
+        <div id="council-animation-container" class="hidden flex-col items-center justify-center p-8 w-full max-w-4xl">
+            <!-- Dynamic Phase Typography -->
+            <div class="text-center space-y-2 mb-8">
+                <h3 id="council-phase-title" class="text-xl font-light tracking-wide text-[var(--text-main)] transition-opacity duration-500">
+                    Initializing Pipeline
+                </h3>
+                <p id="council-status-text" class="text-xs font-semibold tracking-wider uppercase text-[var(--accent-primary)] transition-opacity duration-500 animate-pulse">
+                    Preparing Council...
+                </p>
             </div>
 
-            <div id="agent-coordinator" class="agent-node">
-                <svg class="agent-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
-                    </path>
-                </svg>
-                <span class="agent-label">Coordinator</span>
-            </div>
+            <!-- Glowing Pipeline Flow -->
+            <div class="grid grid-cols-4 gap-4 w-full relative mb-8 max-w-2xl mx-auto">
+                <!-- Connector lines backing -->
+                <div class="absolute top-[28px] left-[12%] right-[12%] h-[2px] bg-[var(--border-color)] z-0">
+                    <div id="council-flow-fill" class="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 transition-all duration-1000 ease-out" style="width: 0%"></div>
+                </div>
 
-            <!-- Status Text Overlay -->
-            <div id="council-status-text"
-                class="absolute bottom-[-60px] text-center w-full text-sm font-bold text-[var(--text-main)] animate-pulse">
-                Initializing Council...
+                <!-- Step 1: Legion -->
+                <div id="agent-node-legion" class="flex flex-col items-center text-center z-10 opacity-30 transition-all duration-500">
+                    <div class="w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-color)] flex items-center justify-center shadow-lg transition-all duration-500" id="agent-circle-legion">
+                        <svg class="w-5 h-5 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                    </div>
+                    <span class="text-[11px] font-bold text-[var(--text-main)] mt-3">Legion</span>
+                    <span class="text-[8px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Drafting</span>
+                </div>
+
+                <!-- Step 2: Nexus -->
+                <div id="agent-node-nexus" class="flex flex-col items-center text-center z-10 opacity-30 transition-all duration-500">
+                    <div class="w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-color)] flex items-center justify-center shadow-lg transition-all duration-500" id="agent-circle-nexus">
+                        <svg class="w-5 h-5 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                        </svg>
+                    </div>
+                    <span class="text-[11px] font-bold text-[var(--text-main)] mt-3">Nexus</span>
+                    <span class="text-[8px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Synthesizing</span>
+                </div>
+
+                <!-- Step 3: Inquisitor -->
+                <div id="agent-node-inquisitor" class="flex flex-col items-center text-center z-10 opacity-30 transition-all duration-500">
+                    <div class="w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-color)] flex items-center justify-center shadow-lg transition-all duration-500" id="agent-circle-inquisitor">
+                        <svg class="w-5 h-5 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.599-3.75A11.952 11.952 0 0112 2.714z" />
+                        </svg>
+                    </div>
+                    <span class="text-[11px] font-bold text-[var(--text-main)] mt-3">Inquisitor</span>
+                    <span class="text-[8px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Critiquing</span>
+                </div>
+
+                <!-- Step 4: Artisan -->
+                <div id="agent-node-artisan" class="flex flex-col items-center text-center z-10 opacity-30 transition-all duration-500">
+                    <div class="w-14 h-14 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-color)] flex items-center justify-center shadow-lg transition-all duration-500" id="agent-circle-artisan">
+                        <svg class="w-5 h-5 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.813 15.904L9 21l5.096-.813a2 2 0 001.414-.586L20.5 14.5a2.121 2.121 0 00-3-3L12.5 16.5a2 2 0 00-.586 1.414z" />
+                        </svg>
+                    </div>
+                    <span class="text-[11px] font-bold text-[var(--text-main)] mt-3">Artisan</span>
+                    <span class="text-[8px] text-[var(--text-muted)] uppercase tracking-wider font-bold">Formatting</span>
+                </div>
             </div>
         </div>
 
@@ -428,5 +466,5 @@
     // Use a placeholder that we replace in JS
     window.REPORT_STATUS_URL_TEMPLATE = "{{ url_for('report_status', task_id='TASK_ID_PLACEHOLDER') }}";
 </script>
-<script src="{{ url_for('static', path='js/report_generator.js') }}"></script>
+<script src="{{ url_for('static', path='js/report_generator.js') }}?v=2"></script>
 {% endblock %}

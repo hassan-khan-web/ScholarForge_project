@@ -11,7 +11,8 @@ async def agent_legion(section_title: str, topic: str, context: str) -> List[str
         "Requirements:\n"
         "1. Be dense, factual, and analytical.\n"
         "2. Use Markdown formatting (## Headers, Tables).\n"
-        "3. Focus on specific stats, numbers, and case studies found in the context."
+        "3. Focus on specific stats, numbers, and case studies found in the context.\n"
+        "4. CITATIONS: You MUST cite specific sources from the context using inline bracket citations (e.g., [1], [2]) directly corresponding to the SOURCE [1], SOURCE [2] indices."
     )
     
     tasks = []

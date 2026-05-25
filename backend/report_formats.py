@@ -102,7 +102,10 @@ def get_template_instructions(format_type: str, page_count: int) -> dict:
             "Content: Maximum density. Analyze historical context, sociological impact, and granular technical specifications."
         )
 
-    selected_template = FORMAT_TEMPLATES.get(format_type, LIT_REVIEW_BASE)
+    if format_type in FORMAT_TEMPLATES:
+        selected_template = FORMAT_TEMPLATES[format_type]
+    else:
+        selected_template = f"[INSTRUCTION: {format_type}\n{{complexity_note}}\n{{common_ins}}]"
     
     fixed_sections_estimate = 2 
     dynamic_middle_count = max(1, target_sections - fixed_sections_estimate)

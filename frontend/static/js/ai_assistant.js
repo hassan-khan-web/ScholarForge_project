@@ -19,7 +19,38 @@
 
     initFileUpload();
     initChatForm();
+    initChatInputAutoResize();
   });
+
+  function initChatInputAutoResize() {
+    const chatInput = document.getElementById('chat-input');
+    if (!chatInput || chatInput.tagName.toLowerCase() !== 'textarea') return;
+
+    const adjustHeight = () => {
+      chatInput.style.height = 'auto'; // Reset to auto to get the clean content height
+      const scrollHeight = chatInput.scrollHeight;
+      
+      if (scrollHeight > 120) {
+        chatInput.style.height = '120px';
+        chatInput.style.overflowY = 'auto';
+      } else {
+        chatInput.style.height = Math.max(36, scrollHeight) + 'px';
+        chatInput.style.overflowY = 'hidden';
+      }
+    };
+
+    chatInput.addEventListener('input', adjustHeight);
+
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const form = document.getElementById('chat-form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+      }
+    });
+  }
 
   function initFileUpload() {
     const fileInput = document.getElementById('file-upload');
@@ -116,6 +147,10 @@
       const mode = document.getElementById('chat-mode')?.value || 'normal';
 
       input.value = '';
+      if (input.tagName.toLowerCase() === 'textarea') {
+        input.style.height = '36px';
+        input.style.overflowY = 'hidden';
+      }
       input.disabled = true;
       document.getElementById('send-btn').disabled = true;
 
@@ -163,6 +198,10 @@
       } finally {
         input.disabled = false;
         document.getElementById('send-btn').disabled = false;
+        if (input.tagName.toLowerCase() === 'textarea') {
+          input.style.height = '36px';
+          input.style.overflowY = 'hidden';
+        }
         input.focus();
       }
     });
@@ -208,23 +247,63 @@
     setTimeout(() => btn.focus(), 100);
   }
 
-  function renderUserMessage(text, fileNames = []) {
+  function extractAttachments(text) {
+    if (!text) return { text: '', files: [] };
+    const pattern = /\n\n\[Attached:\s*(.*?)\]/i;
+    const match = text.match(pattern);
+    if (match) {
+      const cleanText = text.replace(pattern, '').trim();
+      const files = match[1].split(',').map(f => f.trim()).filter(Boolean);
+      return { text: cleanText, files: files };
+    }
+    return { text: text, files: [] };
+  }
+
+  function renderUserMessage(rawText, fileNames = []) {
     const container = document.getElementById('messages-container');
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message user-message';
     const msgId = 'user-msg-' + Date.now();
 
+    // Parse attachments from history text block if present
+    const parsed = extractAttachments(rawText);
+    const textToShow = parsed.text;
+    
+    // De-duplicate both initial fileNames array and parsed file list
+    const allFiles = [...new Set([...fileNames, ...parsed.files])];
+
     let filesHtml = '';
-    if (fileNames.length > 0) {
-      filesHtml = `<div class="text-xs text-blue-300 mt-2 flex flex-wrap gap-1">
-        ${fileNames.map(n => `<span class="bg-blue-500/20 px-2 py-0.5 rounded">📎 ${n}</span>`).join('')}
+    if (allFiles.length > 0) {
+      filesHtml = `<div class="mt-3 flex flex-wrap gap-2 justify-end w-full">
+        ${allFiles.map(name => {
+          const isPdf = name.toLowerCase().endsWith('.pdf');
+          const isDocx = name.toLowerCase().endsWith('.docx');
+          const iconColor = isPdf ? 'text-red-500' : (isDocx ? 'text-blue-500' : 'text-gray-400');
+          const iconSvg = isPdf 
+            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />` 
+            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />`;
+          
+          return `
+            <div class="chatgpt-file-card flex items-center gap-3 p-3 bg-[var(--bg-panel)] hover:bg-[var(--hover-bg)] border border-[var(--border-color)] rounded-xl max-w-xs text-left shadow-sm transition-all select-none">
+              <div class="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  ${iconSvg}
+                </svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-[var(--text-main)] truncate" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+                <div class="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold mt-0.5">${isPdf ? 'PDF Document' : (isDocx ? 'Word Doc' : 'Attachment')}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
       </div>`;
     }
 
     msgDiv.innerHTML = `
       <div class="user-msg-wrapper">
-        <div class="message-bubble" id="${msgId}" data-raw-text="${escapeHtml(text).replace(/"/g, '&quot;')}">
-          <p class="message-text">${escapeHtml(text)}</p>
+        <div class="message-bubble" id="${msgId}" data-raw-text="${escapeHtml(rawText).replace(/"/g, '&quot;')}">
+          <p class="message-text">${escapeHtml(textToShow)}</p>
           ${filesHtml}
         </div>
         <div class="message-actions user-actions">
@@ -736,7 +815,29 @@
 
   window.toggleChatModelSelect = function (id) {
     const opt = document.getElementById(id + '-options');
-    if (opt) opt.classList.toggle('show');
+    if (!opt) return;
+
+    // Determine if input bar is docked at bottom
+    const unitMsg = document.getElementById('unit-msg');
+    const isDocked = unitMsg && unitMsg.classList.contains('unit-msg-docked');
+
+    if (isDocked) {
+      // Open upward when at bottom of screen
+      opt.style.bottom = '100%';
+      opt.style.top = 'auto';
+      opt.style.marginBottom = '4px';
+      opt.style.marginTop = '';
+      opt.style.boxShadow = '0 -10px 25px rgba(0, 0, 0, 0.15)';
+    } else {
+      // Open downward when centered
+      opt.style.bottom = 'auto';
+      opt.style.top = '100%';
+      opt.style.marginTop = '4px';
+      opt.style.marginBottom = '';
+      opt.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.15)';
+    }
+
+    opt.classList.toggle('show');
   };
 
   window.selectCustomOption = function (value, text, inputId, changeCb) {
@@ -778,8 +879,91 @@
     }
   };
 
+  let recognition = null;
+  let isRecording = false;
+  let originalPlaceholder = '';
+
   window.toggleRecording = function () {
-    window.showToast('Voice recording coming soon');
+    const micBtn = document.getElementById('mic-btn');
+    const chatInput = document.getElementById('chat-input');
+    const inputBox = document.querySelector('.input-box');
+    if (!micBtn || !chatInput) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      window.showToast('Speech recognition not supported in this browser. Please use Chrome, Safari or Edge.');
+      return;
+    }
+
+    if (isRecording) {
+      if (recognition) {
+        recognition.stop();
+      }
+      return;
+    }
+
+    try {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = function () {
+        isRecording = true;
+        micBtn.classList.add('text-red-500', 'animate-pulse');
+        micBtn.classList.remove('text-[var(--text-muted)]');
+        if (inputBox) {
+          inputBox.classList.add('ring-2', 'ring-red-500/50', 'border-red-500/50');
+        }
+        originalPlaceholder = chatInput.placeholder || 'Ask a question...';
+        chatInput.placeholder = 'Listening... Speak now!';
+        window.showToast('Listening... Speak now.');
+      };
+
+      recognition.onerror = function (event) {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          window.showToast('Microphone access denied. Please allow microphone permissions.');
+        } else {
+          window.showToast('Speech recognition error: ' + event.error);
+        }
+        stopRecordingState();
+      };
+
+      recognition.onend = function () {
+        stopRecordingState();
+      };
+
+      recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          const currentText = chatInput.value;
+          chatInput.value = currentText ? (currentText + ' ' + transcript) : transcript;
+          chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      };
+
+      recognition.start();
+
+    } catch (e) {
+      console.error('Failed to start speech recognition:', e);
+      window.showToast('Could not start microphone.');
+      stopRecordingState();
+    }
+
+    function stopRecordingState() {
+      isRecording = false;
+      if (micBtn) {
+        micBtn.classList.remove('text-red-500', 'animate-pulse');
+        micBtn.classList.add('text-[var(--text-muted)]');
+      }
+      if (inputBox) {
+        inputBox.classList.remove('ring-2', 'ring-red-500/50', 'border-red-500/50');
+      }
+      if (chatInput) {
+        chatInput.placeholder = originalPlaceholder || 'Ask a question...';
+      }
+    }
   };
 
   // ============================================
